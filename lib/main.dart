@@ -31,9 +31,6 @@ class CanDiagApp extends StatelessWidget {
   }
 }
 
-// -------------------------------------------------------------
-// بانک اطلاعات ترجمه کدهای خطای رایج به فارسی
-// -------------------------------------------------------------
 final Map<String, String> dtcDescriptions = {
   'P0100': 'ایراد در مدار سنسور جریان جرمی هوا (MAF)',
   'P0105': 'ایراد در مدار سنسور فشار منیفولد (MAP)',
@@ -68,18 +65,14 @@ class _MainDiagScreenState extends State<MainDiagScreen> with SingleTickerProvid
   Timer? _liveDataTimer;
   String _serialBuffer = '';
 
-  // پارامترهای زنده (Live Data)
   int _rpm = 0;
   int _speed = 0;
   int _coolant = 0;
   double _battery = 0.0;
   int _throttle = 0;
 
-  // کدهای خطا (DTCs)
   final List<String> _detectedFaults = [];
   bool _isLoadingFaults = false;
-
-  // لاگ ترمینال CAN
   final List<String> _canLogs = [];
 
   @override
@@ -88,7 +81,6 @@ class _MainDiagScreenState extends State<MainDiagScreen> with SingleTickerProvid
     _tabController = TabController(length: 4, vsync: this);
   }
 
-  // --- مدیریت اتصال USB ---
   Future<void> _toggleUsbConnection() async {
     if (_isConnected) {
       _disconnect();
@@ -115,23 +107,20 @@ class _MainDiagScreenState extends State<MainDiagScreen> with SingleTickerProvid
       await _port!.setDTR(true);
       await _port!.setRTS(true);
       await _port!.setPortParameters(
-        115200, // نرخ استاندارد سریال
+        115200,
         UsbPort.DATABITS_8,
         UsbPort.STOPBITS_1,
         UsbPort.PARITY_NONE,
       );
 
       setState(() => _isConnected = true);
-      _showToast('دانگل USB CAN با موفقیت متصل شد.');
+      _showToast('دانگل USB CAN متصل شد.');
 
-      // گوش دادن به داده‌های ورودی
       _port!.inputStream!.listen(_processUsbData, onDone: _disconnect);
 
-      // مقداردهی اولیه SLCAN به سرعت 500Kbps خودرو
-      _sendRawCanCommand('S6\r'); // 500kbps CAN speed
-      _sendRawCanCommand('O\r');  // Open CAN Channel
+      _sendRawCanCommand('S6\r');
+      _sendRawCanCommand('O\r');
 
-      // شروع درخواست دوره‌ای داده‌های زنده
       _startLivePolling();
     } catch (e) {
       _showToast('خطا در اتصال: $e');
@@ -149,7 +138,6 @@ class _MainDiagScreenState extends State<MainDiagScreen> with SingleTickerProvid
     });
   }
 
-  // پردازش داده‌های متنی دریافتی از دانگل
   void _processUsbData(Uint8List data) {
     _serialBuffer += String.fromCharCodes(data);
     while (_serialBuffer.contains('\r') || _serialBuffer.contains('\n')) {
@@ -172,21 +160,16 @@ class _MainDiagScreenState extends State<MainDiagScreen> with SingleTickerProvid
       _canLogs.add(frame);
     });
 
-    // نمونه فریم دریافت پاسخ استاندارد OBD-II:
-    // t7E8 8 04 41 0C 1A F8 00 00 00 (دور موتور)
     if (frame.startsWith('t7E8') || frame.startsWith('t7E9') || frame.contains('41') || frame.contains('43')) {
       _parseObdResponse(frame);
     }
   }
 
-  // رمزگشایی کدهای برگشتی از ECU
   void _parseObdResponse(String frame) {
     try {
-      // نرمال‌سازی فریم
       String clean = frame.replaceAll(RegExp(r'[^0-9A-Fa-f]'), '');
       if (clean.length < 8) return;
 
-      // جستجوی بایت پاسخ سرویس (مثلا 41 برای Live Data)
       int idx41 = clean.indexOf('41');
       if (idx41 != -1 && clean.length >= idx41 + 4) {
         String pid = clean.substring(idx41 + 2, idx41 + 4).toUpperCase();
@@ -194,30 +177,30 @@ class _MainDiagScreenState extends State<MainDiagScreen> with SingleTickerProvid
 
         setState(() {
           switch (pid) {
-            case '0C': // دور موتور RPM = ((A*256)+B)/4
+            case '0C':
               if (payload.length >= 4) {
                 int a = int.parse(payload.substring(0, 2), radix: 16);
                 int b = int.parse(payload.substring(2, 4), radix: 16);
                 _rpm = ((a * 256) + b) ~/ 4;
               }
               break;
-            case '0D': // سرعت Vehicle Speed = A
+            case '0D':
               if (payload.length >= 2) {
                 _speed = int.parse(payload.substring(0, 2), radix: 16);
               }
               break;
-            case '05': // دمای آب Engine Coolant Temp = A - 40
+            case '05':
               if (payload.length >= 2) {
                 _coolant = int.parse(payload.substring(0, 2), radix: 16) - 40;
               }
               break;
-            case '11': // زاویه دریچه گاز Throttle = (A*100)/255
+            case '11':
               if (payload.length >= 2) {
                 int a = int.parse(payload.substring(0, 2), radix: 16);
                 _throttle = ((a * 100) / 255).round();
               }
               break;
-            case '42': // ولتاژ باتری Control Module Voltage = ((A*256)+B)/1000
+            case '42':
               if (payload.length >= 4) {
                 int a = int.parse(payload.substring(0, 2), radix: 16);
                 int b = int.parse(payload.substring(2, 4), radix: 16);
@@ -228,7 +211,6 @@ class _MainDiagScreenState extends State<MainDiagScreen> with SingleTickerProvid
         });
       }
 
-      // پاسخ سرویس 03 (خواندن خطاها - کد 43)
       int idx43 = clean.indexOf('43');
       if (idx43 != -1) {
         String dtcData = clean.substring(idx43 + 4);
@@ -264,7 +246,6 @@ class _MainDiagScreenState extends State<MainDiagScreen> with SingleTickerProvid
     });
   }
 
-  // ارسال فریم‌های استاندارد CAN به ایسیو
   void _sendRawCanCommand(String cmd) {
     if (_port != null && _isConnected) {
       _port!.write(Uint8List.fromList(cmd.codeUnits));
@@ -272,8 +253,6 @@ class _MainDiagScreenState extends State<MainDiagScreen> with SingleTickerProvid
   }
 
   void _sendObdRequest(String serviceAndPid) {
-    // بسته استاندارد درخواست دیاگ به آیدی ایسیو (0x7DF / 0x7E0):
-    // t7DF 8 [Length] [Service] [PID] 00 00 00 00 00\r
     int len = serviceAndPid.length ~/ 2;
     String frame = 't7DF80$len$serviceAndPid' + '00' * (7 - len) + '\r';
     _sendRawCanCommand(frame);
@@ -284,18 +263,16 @@ class _MainDiagScreenState extends State<MainDiagScreen> with SingleTickerProvid
     int step = 0;
     _liveDataTimer = Timer.periodic(const Duration(milliseconds: 150), (timer) {
       if (!_isConnected) return;
-      // ارسال نوبتی درخواست پارامترهای موتور
       switch (step % 4) {
-        case 0: _sendObdRequest('010C'); break; // دور موتور
-        case 1: _sendObdRequest('010D'); break; // سرعت
-        case 2: _sendObdRequest('0105'); break; // دمای آب
-        case 3: _sendObdRequest('0111'); break; // دریچه گاز
+        case 0: _sendObdRequest('010C'); break;
+        case 1: _sendObdRequest('010D'); break;
+        case 2: _sendObdRequest('0105'); break;
+        case 3: _sendObdRequest('0111'); break;
       }
       step++;
     });
   }
 
-  // --- درخواست خواندن خطاها ---
   void _readDtcCodes() {
     if (_isDemoMode) {
       setState(() {
@@ -321,9 +298,7 @@ class _MainDiagScreenState extends State<MainDiagScreen> with SingleTickerProvid
       _detectedFaults.clear();
     });
 
-    // ارسال درخواست Mode 03 (خواندن خطاهای ثبت شده)
     _sendObdRequest('03');
-    // مهلت انتظار پاسخ ایسیو
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted && _isLoadingFaults) {
         setState(() => _isLoadingFaults = false);
@@ -331,13 +306,12 @@ class _MainDiagScreenState extends State<MainDiagScreen> with SingleTickerProvid
     });
   }
 
-  // --- درخواست پاک کردن خطاها ---
   void _clearDtcCodes() {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('پاک‌سازی حافظه خطاهای ایسیو'),
-        content: const Text('آیا از پاک کردن تمام خطاهای موتور (Clear DTCs) اطمینان دارید؟ سوئیچ خودرو باید باز باشد.'),
+        content: const Text('آیا از پاک کردن تمام خطاهای موتور اطمینان دارید؟'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('انصراف')),
           ElevatedButton(
@@ -346,13 +320,12 @@ class _MainDiagScreenState extends State<MainDiagScreen> with SingleTickerProvid
               Navigator.pop(ctx);
               if (_isDemoMode) {
                 setState(() => _detectedFaults.clear());
-                _showToast('خطاها با موفقیت پاک شدند (حالت شبیه‌ساز).');
+                _showToast('خطاها با موفقیت پاک شدند.');
                 return;
               }
-              // ارسال درخواست Mode 04 برای ریست خطاهای ذخیره شده
               _sendObdRequest('04');
               setState(() => _detectedFaults.clear());
-              _showToast('دستور پاک کردن خطاها به ایسیو ارسال شد.');
+              _showToast('دستور پاک کردن خطاها ارسال شد.');
             },
             child: const Text('پاک کردن خطاها'),
           )
@@ -361,7 +334,6 @@ class _MainDiagScreenState extends State<MainDiagScreen> with SingleTickerProvid
     );
   }
 
-  // --- ارسال دستور تست عملگرها ---
   void _executeActuatorTest(String name, String servicePayload) {
     if (!_isConnected && !_isDemoMode) {
       _showToast('برای تست عملگرها باید به خودرو متصل باشید.');
@@ -380,7 +352,6 @@ class _MainDiagScreenState extends State<MainDiagScreen> with SingleTickerProvid
             onPressed: () {
               Navigator.pop(ctx);
               if (_isConnected) {
-                // ارسال فریم UDS IO Control / Routine Test به ایسیو
                 _sendRawCanCommand('t7E08' + servicePayload + '\r');
               }
               _showToast('دستور فعال‌سازی $name ارسال شد.');
@@ -392,7 +363,6 @@ class _MainDiagScreenState extends State<MainDiagScreen> with SingleTickerProvid
     );
   }
 
-  // حالت شبیه‌ساز داخلی برای تست بدون خودرو
   void _toggleDemo(bool enable) {
     setState(() => _isDemoMode = enable);
     _liveDataTimer?.cancel();
@@ -415,60 +385,25 @@ class _MainDiagScreenState extends State<MainDiagScreen> with SingleTickerProvid
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
-  @override
-  void dispose() {
-    _disconnect();
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('دیاگ تخصصی خودرو (CAN / OBD2)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        centerTitle: true,
-        backgroundColor: const Color(0xFF161B22),
-        actions: [
-          IconButton(
-            icon: Icon(_isDemoMode ? Icons.play_circle : Icons.play_circle_outline,
-                color: _isDemoMode ? Colors.amber : Colors.grey),
-            tooltip: 'شبیه‌ساز تستی',
-            onPressed: () => _toggleDemo(!_isDemoMode),
-          ),
-          IconButton(
-            icon: Icon(
-              _isConnected ? Icons.usb : Icons.usb_off,
-              color: _isConnected ? const Color(0xFF58A6FF) : Colors.grey,
-            ),
-            tooltip: 'اتصال دانگل USB',
-            onPressed: _toggleUsbConnection,
-          ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: const Color(0xFF58A6FF),
-          tabs: const [
-            Tab(icon: Icon(Icons.speed), text: 'داده زنده'),
-            Tab(icon: Icon(Icons.warning_amber_rounded), text: 'کدهای خطا'),
-            Tab(icon: Icon(Icons.touch_app), text: 'تست عملگرها'),
-            Tab(icon: Icon(Icons.terminal), text: 'ترمینال CAN'),
-          ],
-        ),
+  Widget _buildGaugeCard(String title, String val, String unit, Color clr) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF161B22),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: clr.withOpacity(0.3)),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      child: Column(
         children: [
-          _buildLiveDataTab(),
-          _buildDtcFaultsTab(),
-          _buildActuatorTestTab(),
-          _buildTerminalTab(),
+          Text(title, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          const SizedBox(height: 8),
+          Text(val, style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: clr)),
+          Text(unit, style: const TextStyle(fontSize: 11, color: Colors.white38)),
         ],
       ),
     );
   }
 
-  // ۱. تب پارامترهای زنده موتور
   Widget _buildLiveDataTab() {
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -514,7 +449,6 @@ class _MainDiagScreenState extends State<MainDiagScreen> with SingleTickerProvid
     );
   }
 
-  // ۲. تب خواندن و پاک کردن خطاهای ایسیو
   Widget _buildDtcFaultsTab() {
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -553,14 +487,13 @@ class _MainDiagScreenState extends State<MainDiagScreen> with SingleTickerProvid
                 ? const Center(child: CircularProgressIndicator())
                 : _detectedFaults.isEmpty
                     ? const Center(
-                        child: Text('هیچ خطایی ثبت نشده است (یا هنوز دکمه خواندن را نزده‌اید)',
-                            style: TextStyle(color: Colors.grey)),
+                        child: Text('هیچ خطایی ثبت نشده است', style: TextStyle(color: Colors.grey)),
                       )
                     : ListView.builder(
                         itemCount: _detectedFaults.length,
                         itemBuilder: (ctx, i) {
                           final code = _detectedFaults[i];
-                          final desc = dtcDescriptions[code] ?? 'کد خطای ناشناخته / اختصاصی کارخانه';
+                          final desc = dtcDescriptions[code] ?? 'کد خطای ناشناخته / اختصاصی';
                           return Card(
                             margin: const EdgeInsets.only(bottom: 10),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -575,7 +508,131 @@ class _MainDiagScreenState extends State<MainDiagScreen> with SingleTickerProvid
                                 child: Text(code, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                               ),
                               title: Text(desc, style: const TextStyle(fontSize: 14)),
-                              subtitle: const Text('وضعیت: دائم / ذخیره شده در حافظه ECU', style: TextStyle(fontSize: 11, color: Colors.grey)),
                             ),
                           );
-                    
+                        },
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActuatorTestTab() {
+    final actuators = [
+      {'name': 'فن خنک‌کننده (دور کند)', 'icon': Icons.toys, 'payload': '042F0101000000'},
+      {'name': 'فن خنک‌کننده (دور تند)', 'icon': Icons.toys, 'payload': '042F0102000000'},
+      {'name': 'رله پمپ بنزین / دوبل', 'icon': Icons.local_gas_station, 'payload': '042F0201000000'},
+      {'name': 'انژکتور سیلندر ۱', 'icon': Icons.flash_on, 'payload': '042F0301000000'},
+      {'name': 'انژکتور سیلندر ۲', 'icon': Icons.flash_on, 'payload': '042F0302000000'},
+      {'name': 'شیر برقی کنیستر', 'icon': Icons.filter_alt, 'payload': '042F0401000000'},
+      {'name': 'چراغ چک پشت آمپر (MIL)', 'icon': Icons.warning, 'payload': '042F0501000000'},
+    ];
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: actuators.length,
+      itemBuilder: (ctx, i) {
+        final act = actuators[i];
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: ListTile(
+            leading: Icon(act['icon'] as IconData, color: const Color(0xFF58A6FF)),
+            title: Text(act['name'] as String, style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: const Text('ارسال پالس تحریک به مدت ۵ ثانیه', style: TextStyle(fontSize: 12, color: Colors.grey)),
+            trailing: ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF238636)),
+              onPressed: () => _executeActuatorTest(act['name'] as String, act['payload'] as String),
+              child: const Text('تست'),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTerminalTab() {
+    return Container(
+      color: const Color(0xFF0D1117),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('CAN Bus Raw Stream:', style: TextStyle(color: Colors.grey, fontSize: 12)),
+              TextButton(onPressed: () => setState(() => _canLogs.clear()), child: const Text('پاکسازی')),
+            ],
+          ),
+          Expanded(
+            child: ListView.builder(
+              reverse: true,
+              itemCount: _canLogs.length,
+              itemBuilder: (ctx, i) {
+                final log = _canLogs[_canLogs.length - 1 - i];
+                return Text(
+                  log,
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 13, color: Color(0xFF58A6FF)),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _disconnect();
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+ appBar: AppBar(
+        title: const Text('دیاگ تخصصی خودرو (CAN / OBD2)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        centerTitle: true,
+        backgroundColor: const Color(0xFF161B22),
+        actions: [
+          IconButton(
+            icon: Icon(_isDemoMode ? Icons.play_circle : Icons.play_circle_outline,
+                color: _isDemoMode ? Colors.amber : Colors.grey),
+            tooltip: 'شبیه‌ساز تستی',
+            onPressed: () => _toggleDemo(!_isDemoMode),
+          ),
+          IconButton(
+            icon: Icon(
+              _isConnected ? Icons.usb : Icons.usb_off,
+              color: _isConnected ? const Color(0xFF58A6FF) : Colors.grey,
+            ),
+            tooltip: 'اتصال دانگل USB',
+            onPressed: _toggleUsbConnection,
+          ),
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: const Color(0xFF58A6FF),
+          tabs: const [
+            Tab(icon: Icon(Icons.speed), text: 'داده زنده'),
+            Tab(icon: Icon(Icons.warning_amber_rounded), text: 'خطاها'),
+            Tab(icon: Icon(Icons.touch_app), text: 'عملگرها'),
+            Tab(icon: Icon(Icons.terminal), text: 'ترمینال'),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildLiveDataTab(),
+          _buildDtcFaultsTab(),
+          _buildActuatorTestTab(),
+          _buildTerminalTab(),
+        ],
+      ),
+    );
+  }
+}
