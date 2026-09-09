@@ -10,37 +10,44 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Java
+      - name: Setup Java JDK
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Setup Flutter
+      - name: Setup Flutter Framework
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.19.6'
           channel: 'stable'
 
-      - name: Generate Fresh Project & Build
+      - name: Build Project & Generate APK
         run: |
-          # ساخت یک پروژه تمیز با ساختار کامل اندروید
-          flutter create --org com.candlag.app diag_app
+          # ساخت اسکلت کامل پروژه
+          flutter create --org com.autodiag.app --project-name can_diag_app app_build
           
-          # کپی کردن کد برنامه اصلی داخل پروژه جدید
-          cp lib/main.dart diag_app/lib/main.dart
-          cp pubspec.yaml diag_app/pubspec.yaml
+          # کپی فایل برنامه
+          cp lib/main.dart app_build/lib/main.dart
           
-          cd diag_app
-          flutter pub get
+          cd app_build
+          
+          # افزودن مستقیم پکیج‌ها با هماهنگی کامل
+          flutter pub add usb_serial permission_handler cupertino_icons
+          
+          # تنظیم دسترسی USB در منیفست
+          sed -i '/<\/application>/i <intent-filter><action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" /></intent-filter>' android/app/src/main/AndroidManifest.xml
+          sed -i '/<application/i <uses-feature android:name="android.hardware.usb.host" />' android/app/src/main/AndroidManifest.xml
+          
+          # ساخت APK نهایی
           flutter build apk --release
 
-      - name: Upload APK Artifact
+      - name: Upload Finished APK
         uses: actions/upload-artifact@v4
         with:
-          name: CAN-Diag-Pro-APK
-          path: diag_app/build/app/outputs/flutter-apk/app-release.apk
+          name: CAN-Diag-Pro-Release-APK
+          path: app_build/build/app/outputs/flutter-apk/app-release.apk
           
