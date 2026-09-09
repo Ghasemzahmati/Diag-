@@ -27,27 +27,51 @@ jobs:
 
       - name: Build Project & Generate APK
         run: |
-          # ساخت اسکلت کامل پروژه
-          flutter create --org com.autodiag.app --project-name can_diag_app app_build
+          flutter config --no-analytics
+          flutter create --org com.autodiag.app --project-name can_diag_app --no-pub app_build
           
-          # کپی فایل برنامه
+          # کپی کد اصلی برنامه
           cp lib/main.dart app_build/lib/main.dart
           
           cd app_build
-          
-          # افزودن مستقیم پکیج‌ها با هماهنگی کامل
           flutter pub add usb_serial permission_handler cupertino_icons
           
-          # تنظیم دسترسی USB در منیفست
-          sed -i '/<\/application>/i <intent-filter><action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" /></intent-filter>' android/app/src/main/AndroidManifest.xml
-          sed -i '/<application/i <uses-feature android:name="android.hardware.usb.host" />' android/app/src/main/AndroidManifest.xml
+          # ایجاد فایل منیفست استاندارد و بدون خطای نحوی
+          cat << 'EOF' > android/app/src/main/AndroidManifest.xml
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              package="com.autodiag.app.can_diag_app">
+              <uses-permission android:name="android.permission.USB_PERMISSION" />
+              <uses-feature android:name="android.hardware.usb.host" />
+              <application
+                  android:label="CAN Diag Pro"
+                  android:name="${applicationName}"
+                  android:icon="@mipmap/ic_launcher">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:launchMode="singleTop"
+                      android:theme="@style/LaunchTheme"
+                      android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+                      android:hardwareAccelerated="true"
+                      android:windowSoftInputMode="adjustResize">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN"/>
+                          <category android:name="android.intent.category.LAUNCHER"/>
+                      </intent-filter>
+                  </activity>
+                  <meta-data
+                      android:name="flutterEmbedding"
+                      android:value="2" />
+              </application>
+          </manifest>
+          EOF
           
-          # ساخت APK نهایی
+          # ساخت فایل APK نهایی
           flutter build apk --release
 
       - name: Upload Finished APK
         uses: actions/upload-artifact@v4
         with:
-          name: CAN-Diag-Pro-Release-APK
+          name: CAN-Diag-Pro-APK
           path: app_build/build/app/outputs/flutter-apk/app-release.apk
           
