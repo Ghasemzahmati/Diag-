@@ -1,4 +1,4 @@
-name: Build Diagnostic APK
+name: Build Rasa Automotive Diagnostic APK
 
 on:
   push:
@@ -25,25 +25,30 @@ jobs:
           flutter-version: '3.19.6'
           channel: 'stable'
 
-      - name: Build Project & Generate APK
+      - name: Build Rasa Project & Generate APK
         run: |
           flutter config --no-analytics
-          flutter create --org com.autodiag.app --project-name can_diag_app --no-pub app_build
+          flutter create --org com.rasa.diag --project-name rasa_app --no-pub app_build
           
-          # کپی کد اصلی برنامه
+          # کپی سورس کد اصلی
           cp lib/main.dart app_build/lib/main.dart
           
           cd app_build
-          flutter pub add usb_serial permission_handler cupertino_icons
+          flutter pub add flutter_bluetooth_serial permission_handler cupertino_icons web_socket_channel device_info_plus shared_preferences http
           
-          # ایجاد فایل منیفست استاندارد و بدون خطای نحوی
+          # تنظیم منیفست با نام تجاری Rasa
           cat << 'EOF' > android/app/src/main/AndroidManifest.xml
           <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-              package="com.autodiag.app.can_diag_app">
-              <uses-permission android:name="android.permission.USB_PERMISSION" />
-              <uses-feature android:name="android.hardware.usb.host" />
+              package="com.rasa.diag.rasa_app">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+              <uses-permission android:name="android.permission.BLUETOOTH" />
+              <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+              <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
+              <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
               <application
-                  android:label="CAN Diag Pro"
+                  android:label="Rasa"
                   android:name="${applicationName}"
                   android:icon="@mipmap/ic_launcher">
                   <activity
@@ -66,12 +71,11 @@ jobs:
           </manifest>
           EOF
           
-          # ساخت فایل APK نهایی
           flutter build apk --release
 
       - name: Upload Finished APK
         uses: actions/upload-artifact@v4
         with:
-          name: CAN-Diag-Pro-APK
+          name: Rasa-Diag-Pro-APK
           path: app_build/build/app/outputs/flutter-apk/app-release.apk
           
