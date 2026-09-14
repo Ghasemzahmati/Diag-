@@ -1124,6 +1124,7 @@ Widget _buildTelemetryCard(String title, String val, IconData icon, Color color)
     );
   }
   // ۵. تب عملگرها
+    // ۵. تب عملگرها (اصلاح شده)
   Widget _buildActuatorsTab() {
     final actuators = [
       {'name': 'فن خنک‌کننده (دور کند)', 'icon': Icons.toys_rounded, 'cmd': '2F010103'},
@@ -1131,8 +1132,9 @@ Widget _buildTelemetryCard(String title, String val, IconData icon, Color color)
       {'name': 'رله پمپ بنزین / دوبل', 'icon': Icons.local_gas_station_rounded, 'cmd': '2F020103'},
       {'name': 'شیر برقی کنیستر', 'icon': Icons.filter_alt_rounded, 'cmd': '2F040103'},
       {'name': 'چراغ چک پشت آمپر (MIL)', 'icon': Icons.warning_rounded, 'cmd': '2F050103'},
-    ];  
-      return ListView.builder(
+    ];
+
+    return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: actuators.length,
       itemBuilder: (ctx, i) => Container(
@@ -1142,24 +1144,30 @@ Widget _buildTelemetryCard(String title, String val, IconData icon, Color color)
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Colors.white10),
         ),
-              child: ListTile(
+        child: ListTile(
           leading: Icon(actuators[i]['icon'] as IconData, color: const Color(0xFF00F0FF)),
           title: Text(actuators[i]['name'] as String, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
           trailing: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: _isActuatorRunning ? Colors.grey : const Color(0xFF00E676),
+              backgroundColor: const Color(0xFF00E676),
               foregroundColor: Colors.black,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-                      onPressed: _isActuatorRunning
-                ? null
-                : () => _executeActuatorTest(actuators[i]['cmd'] as String, actuators[i]['name'] as String),
-            child: const Text('تست فعال‌سازی', style: TextStyle(fontWeight: FontWeight.bold)),
+            onPressed: () {
+              if (!_isActuatorRunning) {
+                _executeActuatorTest(actuators[i]['cmd'] as String, actuators[i]['name'] as String);
+              }
+            },
+            child: Text(
+              _isActuatorRunning ? 'درحال تست...' : 'تست فعال‌سازی',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ),
       ),
     );
   }
+  
    // ۶. ترمینال مانیتورینگ
   Widget _buildTerminalTab() {
     final textController = TextEditingController();
