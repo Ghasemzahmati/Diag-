@@ -1,33 +1,236 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const RasaDiagApp());
+
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+    ),
+  );
+
+  runApp(const RasaApp());
 }
 
-class RasaDiagApp extends StatelessWidget {
-  const RasaDiagApp({super.key});
+class RasaApp extends StatelessWidget {
+  const RasaApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'RASA DIAG',
-      theme: ThemeData(
-        useMaterial3: true,
-        fontFamily: 'Vazirmatn',
-        colorSchemeSeed: Colors.deepPurple,
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF0B0B10),
+      title: 'RASA DIAG Professional',
+      theme: ThemeData.dark().copyWith(
+        scaffoldBackgroundColor: const Color(0xFF080B10),
+        cardColor: const Color(0xFF10141E),
+        colorScheme: const ColorScheme.dark(
+          primary: Color(0xFF00F0FF),
+          secondary: Color(0xFF00E676),
+          error: Color(0xFFFF2A55),
+          surface: Color(0xFF10141E),
+        ),
       ),
-      home: const LicenseGate(),
+      home: const RasaLicenseGatekeeper(),
+    );
+  }
+}
+
+class RasaLicenseGatekeeper extends StatefulWidget {
+  const RasaLicenseGatekeeper({super.key});
+
+  @override
+  State<RasaLicenseGatekeeper> createState() =>
+      _RasaLicenseGatekeeperState();
+}
+
+class _RasaLicenseGatekeeperState
+    extends State<RasaLicenseGatekeeper> {
+  String _deviceId = 'در حال استخراج...';
+  bool _checking = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkLicense();
+  }
+
+  Future<void> _checkLicense() async {
+    try {
+      final info = DeviceInfoPlugin();
+
+      String raw;
+
+      if (Platform.isAndroid) {
+        final a = await info.androidInfo;
+
+        raw =
+            '${a.manufacturer}-${a.model}-${a.id}'
+                .toUpperCase();
+      } else {
+        raw =
+            'RASA-${DateTime.now().millisecondsSinceEpoch}';
+      }
+
+      _deviceId =
+          'RASA-${raw.hashCode.abs().toRadixString(16).toUpperCase()}';
+
+      final prefs =
+          await SharedPreferences.getInstance();
+
+      final local = prefs.getBool(
+            'license_${_deviceId.replaceAll('-', '_')}',
+          ) ??
+          false;
+
+      if (!mounted) return;
+
+      setState(() {
+        _checking = false;
+      });
+
+      if (local) {
+        _openApp();
+      } else {
+        await _showActivation();
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _checking = false;
+        });
+      }
+
+      await _showActivation();
+    }
+  }
+
+  Future<void> _showActivation() async {
+    final controller = TextEditingController();
+
+    if (!mounted) return;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) {
+        return AlertDialog(
+          title: const Text(
+            'فعال‌سازی RASA DIAG',
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'شناسه دستگاه:',
+              ),
+              const SizedBox(height: 8),
+              SelectableText(
+                _deviceId,
+                style: const TextStyle(
+                  color: Color(0xFF00F0FF),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                decoration: const InputDecoration(
+                  labelText: 'کلید فعال‌سازی',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('بعداً'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                /*
+                 * برای نسخه تجاری باید اعتبارسنجی
+                 * کلید در سرور انجام شود.
+                 */
+                if (controller.text.trim().length < 8) {
+                  return;
+                }
+
+                final prefs =
+                    await SharedPreferences.getInstance();
+
+                await prefs.setBool(
+                  'license_${_deviceId.replaceAll('-', '_')}',
+                  true,
+                );
+
+                if (!mounted) return;
+
+                Navigator.pop(context);
+
+                _openApp();
+              },
+              child: const Text('فعال‌سازی'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _openApp() {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) =>
+            const RasaDashboardScreen(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: _checking
+            ? const CircularProgressIndicator()
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.car_repair_rounded,
+                    size: 72,
+                    color: Color(0xFF00F0FF),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'RASA DIAG PROFESSIONAL',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _deviceId,
+                    style: const TextStyle(
+                      color: Colors.white54,
+                    ),
+                  ),
+                ],
+              ),
+      ),
     );
   }
 }
@@ -41,106 +244,89 @@ class EcuProfile {
   final String model;
   final String family;
   final String protocol;
-  final String protocolCommand;
-  final String header;
-  final String functionalHeader;
+  final String? header;
+  final String? functionalHeader;
 
   const EcuProfile({
     required this.manufacturer,
     required this.model,
     required this.family,
     required this.protocol,
-    required this.protocolCommand,
-    required this.header,
-    required this.functionalHeader,
+    this.header,
+    this.functionalHeader,
   });
 
-  String get displayName => '$manufacturer - $model';
+  String get title =>
+      '$manufacturer $model';
 }
 
 /* ============================================================
-   VEHICLE / ECU DATABASE
+   ECU DATABASE
    ============================================================ */
 
-const List<EcuProfile> ecuProfiles = [
+const ecuProfiles = <EcuProfile>[
   EcuProfile(
-    manufacturer: 'ایران خودرو / سایپا',
-    model: 'Siemens / SSAT',
-    family: 'KWP',
-    protocol: 'ISO 14230 KWP Fast Init',
-    protocolCommand: 'ATSP5',
-    header: '8111F1',
-    functionalHeader: '81',
+    manufacturer: 'Bosch',
+    model: 'ME7.4.x',
+    family: 'Peugeot / Iran Khodro',
+    protocol: 'KWP2000',
+    header: 'ATSH 8111F1',
   ),
 
   EcuProfile(
-    manufacturer: 'ایران خودرو',
-    model: 'Sagem / Valeo S2000 / PL4',
-    family: 'KWP',
-    protocol: 'ISO 14230 KWP 5-Baud',
-    protocolCommand: 'ATSP4',
-    header: '8111F1',
-    functionalHeader: '81',
+    manufacturer: 'Sagem / Valeo',
+    model: 'S2000 / PL4',
+    family: 'Iran Khodro / Saipa',
+    protocol: 'KWP2000',
+    header: 'ATSH 8111F1',
   ),
 
   EcuProfile(
-    manufacturer: 'پژو 206 / رانا',
-    model: 'Bosch ME7.4.4 / ME7.4.9',
-    family: 'KWP',
-    protocol: 'ISO 14230 KWP',
-    protocolCommand: 'ATSP5',
-    header: '8111F1',
-    functionalHeader: '81',
+    manufacturer: 'Siemens / SSAT',
+    model: 'KWP',
+    family: 'Iran Khodro / Saipa',
+    protocol: 'KWP2000',
+    header: 'ATSH 8111F1',
   ),
 
   EcuProfile(
-    manufacturer: 'ایران خودرو',
-    model: 'Bosch ME17 / Easy-U',
-    family: 'UDS',
-    protocol: 'ISO 15765-4 CAN 11bit 500k',
-    protocolCommand: 'ATSP6',
-    header: '7E0',
-    functionalHeader: '7DF',
+    manufacturer: 'Bosch',
+    model: 'ME17 / Easy-U',
+    family: 'Dena / Peugeot / Samand',
+    protocol: 'CAN 500K',
+    header: 'ATSH 7E0',
   ),
 
   EcuProfile(
-    manufacturer: 'MVM / Chery / Phenix',
+    manufacturer: 'Chery / MVM',
     model: 'UDS CAN',
-    family: 'UDS',
-    protocol: 'ISO 15765-4 CAN 11bit 500k',
-    protocolCommand: 'ATSP6',
-    header: '7E0',
-    functionalHeader: '7DF',
+    family: 'MVM / Fownix',
+    protocol: 'UDS ISO-TP',
+    header: 'ATSH 7E0',
   ),
 
   EcuProfile(
-    manufacturer: 'کرمان موتور',
-    model: 'JAC / KMC Bosch / Delphi',
-    family: 'UDS',
-    protocol: 'ISO 15765-4 CAN 11bit 500k',
-    protocolCommand: 'ATSP6',
-    header: '7E0',
-    functionalHeader: '7DF',
+    manufacturer: 'Bosch / Delphi',
+    model: 'CAN',
+    family: 'JAC / KMC',
+    protocol: 'CAN 500K',
+    header: 'ATSH 7E0',
   ),
 
   EcuProfile(
-    manufacturer: 'بهمن / هایما / برلیانس / چانگان',
-    model: 'CAN 500k',
-    family: 'UDS',
-    protocol: 'ISO 15765-4 CAN 11bit 500k',
-    protocolCommand: 'ATSP6',
-    header: '7E0',
-    functionalHeader: '7DF',
+    manufacturer: 'Haima / Changan / Brilliance',
+    model: 'CAN',
+    family: 'Bahman / Chinese',
+    protocol: 'CAN 500K',
+    header: 'ATSH 7E0',
   ),
 
   EcuProfile(
-    manufacturer: 'عمومی',
+    manufacturer: 'Generic',
     model: 'OBD-II',
-    family: 'OBD',
-    protocol: 'Automatic',
-    protocolCommand: 'ATSP0',
-    header: '7DF',
-    functionalHeader: '7DF',
+    family: 'All supported vehicles',
+    protocol: 'OBD-II',
+    functionalHeader: 'ATSH 7DF',
   ),
 ];
 
@@ -148,396 +334,341 @@ const List<EcuProfile> ecuProfiles = [
    DTC DATABASE
    ============================================================ */
 
-const Map<String, String> dtcDescriptions = {
-  'P0100': 'مدار سنسور MAF / جریان هوا',
-  'P0105': 'مدار سنسور MAP',
-  'P0110': 'مدار سنسور دمای هوای ورودی IAT',
-  'P0115': 'مدار سنسور دمای مایع خنک‌کننده ECT',
-  'P0120': 'مدار سنسور موقعیت دریچه گاز TPS',
-  'P0130': 'مدار سنسور اکسیژن Bank 1 Sensor 1',
-  'P0136': 'مدار سنسور اکسیژن Bank 1 Sensor 2',
-  'P0200': 'خطای مدار انژکتورها',
-  'P0300': 'احتراق ناقص تصادفی / چند سیلندر',
-  'P0335': 'مدار سنسور موقعیت میل‌لنگ CKP',
-  'P0340': 'مدار سنسور موقعیت میل‌سوپاپ CMP',
-  'P0420': 'بازده پایین کاتالیست',
-  'P0443': 'مدار شیر purge سیستم EVAP',
-  'P0500': 'خطای سنسور سرعت خودرو',
-  'P0560': 'ولتاژ سیستم خودرو',
-  'P0606': 'خطای پردازنده ECU',
+const dtcDescriptions = <String, String>{
+  'P0100':
+      'مدار سنسور جریان هوای جرمی (MAF)',
+  'P0105':
+      'مدار سنسور فشار منیفولد (MAP)',
+  'P0110':
+      'مدار سنسور دمای هوای ورودی (IAT)',
+  'P0115':
+      'مدار سنسور دمای مایع خنک‌کننده (ECT)',
+  'P0120':
+      'مدار موقعیت دریچه گاز (TPS)',
+  'P0130':
+      'مدار سنسور اکسیژن Bank 1 Sensor 1',
+  'P0136':
+      'مدار سنسور اکسیژن Bank 1 Sensor 2',
+  'P0200':
+      'مدار انژکتورها',
+  'P0300':
+      'احتراق ناقص تصادفی',
+  'P0335':
+      'سنسور موقعیت میل‌لنگ',
+  'P0340':
+      'سنسور موقعیت میل‌سوپاپ',
+  'P0420':
+      'راندمان کاتالیست پایین',
+  'P0443':
+      'شیر برقی EVAP',
+  'P0500':
+      'سنسور سرعت خودرو',
+  'P0560':
+      'ولتاژ سیستم برق',
+  'P0606':
+      'پردازنده ECU',
 };
 
 /* ============================================================
-   DIAGNOSTIC DATA
+   DIAGNOSTIC FRAME
    ============================================================ */
 
-class LiveData {
-  double? rpm;
-  double? speed;
-  double? coolant;
-  double? throttle;
-  double? engineLoad;
-  double? intakeAir;
-  double? oxygen;
-  double? battery;
+class DiagnosticFrame {
+  final String command;
+  final String response;
+  final DateTime time;
 
-  LiveData copy() {
-    return LiveData()
-      ..rpm = rpm
-      ..speed = speed
-      ..coolant = coolant
-      ..throttle = throttle
-      ..engineLoad = engineLoad
-      ..intakeAir = intakeAir
-      ..oxygen = oxygen
-      ..battery = battery;
-  }
-}
-
-class DtcItem {
-  final String code;
-  final String description;
-
-  const DtcItem({
-    required this.code,
-    required this.description,
-  });
+  DiagnosticFrame(
+    this.command,
+    this.response,
+  ) : time = DateTime.now();
 }
 
 /* ============================================================
-   LICENSE GATE
+   MAIN DIAGNOSTIC SCREEN
    ============================================================ */
 
-class LicenseGate extends StatefulWidget {
-  const LicenseGate({super.key});
+class RasaDashboardScreen extends StatefulWidget {
+  const RasaDashboardScreen({super.key});
 
   @override
-  State<LicenseGate> createState() => _LicenseGateState();
+  State<RasaDashboardScreen> createState() =>
+      _RasaDashboardScreenState();
 }
 
-class _LicenseGateState extends State<LicenseGate> {
-  final TextEditingController _controller = TextEditingController();
-
-  bool _checking = true;
-  bool _licensed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadLicense();
-  }
-
-  Future<void> _loadLicense() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    final active = prefs.getBool('license_active') ?? false;
-
-    if (!mounted) return;
-
-    setState(() {
-      _licensed = active;
-      _checking = false;
-    });
-  }
-
-  Future<void> _activate() async {
-    final key = _controller.text.trim();
-
-    if (key.length < 8) {
-      _showMessage('کد فعال‌سازی معتبر نیست');
-      return;
-    }
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('license_active', true);
-
-    if (!mounted) return;
-
-    setState(() {
-      _licensed = true;
-    });
-  }
-
-  void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_checking) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
-    if (_licensed) {
-      return const DiagnosticHome();
-    }
-
-    return Scaffold(
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  children: [
-                    const Icon(
-                      Icons.car_repair,
-                      size: 80,
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'RASA DIAG',
-                      style: TextStyle(
-                        fontSize: 30,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Professional Automotive Diagnostic',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 30),
-                    TextField(
-                      controller: _controller,
-                      decoration: const InputDecoration(
-                        labelText: 'کد فعال‌سازی',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: _activate,
-                        icon: const Icon(Icons.key),
-                        label: const Text('فعال‌سازی'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/* ============================================================
-   MAIN DIAGNOSTIC HOME
-   ============================================================ */
-
-class DiagnosticHome extends StatefulWidget {
-  const DiagnosticHome({super.key});
-
-  @override
-  State<DiagnosticHome> createState() => _DiagnosticHomeState();
-}
-
-class _DiagnosticHomeState extends State<DiagnosticHome>
+class _RasaDashboardScreenState
+    extends State<RasaDashboardScreen>
     with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+  late final TabController _tabs;
 
   BluetoothConnection? _connection;
-  StreamSubscription<Uint8List>? _inputSubscription;
 
-  final StringBuffer _rxBuffer = StringBuffer();
+  StreamSubscription<Uint8List>? _serialSub;
 
-  bool _connecting = false;
+  Timer? _pollTimer;
+  Timer? _demoTimer;
+
+  final List<String> _logs = [];
+  final List<String> _dtcs = [];
+
+  final Map<String, Completer<String>>
+      _waiters = {};
+
+  String _buffer = '';
+
   bool _connected = false;
-  bool _demoMode = false;
-  bool _isBusy = false;
+  bool _connecting = false;
+  bool _demo = false;
+  bool _requestInFlight = false;
+  bool _scanInProgress = false;
 
-  String _adapterInfo = 'متصل نیست';
-  String _protocolInfo = '-';
+  bool _supportsOdometer = false;
+  bool _isKwp = false;
 
-  EcuProfile? _selectedProfile;
+  EcuProfile _profile =
+      ecuProfiles.last;
 
+  String _protocol = 'Unknown';
   String _ecuModel = 'شناسایی نشده';
-  String _ecuSoftware = 'نامشخص';
-  String _vin = 'نامشخص';
+  String _ecuSoftware = '---';
+  String _vin = '---';
+  String _adapterInfo = '---';
+  String _connectionStatus =
+      'آماده اتصال';
 
-  LiveData _liveData = LiveData();
+  int _rpm = 0;
+  int _speed = 0;
+  int _coolant = 0;
+  int _throttle = 0;
+  int _engineLoad = 0;
+  int _iat = 0;
 
-  final List<DtcItem> _dtcs = [];
+  double _voltage = 0;
+  double _o2 = 0;
+  double _odometer = 0;
 
-  Timer? _liveTimer;
+  String _odometerStatus =
+      'استعلام نشده';
 
-  final TextEditingController _terminalController =
+  String _activeActuator = '';
+
+  bool _loadingDtc = false;
+  bool _clearingDtc = false;
+
+  int _pollIndex = 0;
+
+  final TextEditingController
+      _terminalController =
       TextEditingController();
-
-  final List<String> _terminalLog = [];
-
-  final Map<String, Completer<String>> _waiters = {};
 
   @override
   void initState() {
     super.initState();
 
-    _tabController = TabController(
+    _tabs = TabController(
       length: 7,
       vsync: this,
     );
-
-    _selectedProfile = ecuProfiles.last;
-  }
-
-  @override
-  void dispose() {
-    _liveTimer?.cancel();
-    _inputSubscription?.cancel();
-    _connection?.dispose();
-    _tabController.dispose();
-    _terminalController.dispose();
-
-    super.dispose();
   }
 
   /* ==========================================================
-     BLUETOOTH PERMISSIONS
+     LOG
      ========================================================== */
 
-  Future<bool> _requestBluetoothPermissions() async {
-    if (Theme.of(context).platform == TargetPlatform.android) {
-      final scan = await Permission.bluetoothScan.request();
-      final connect = await Permission.bluetoothConnect.request();
+  void _log(String text) {
+    if (!mounted) return;
 
-      return scan.isGranted && connect.isGranted;
+    setState(() {
+      if (_logs.length >= 150) {
+        _logs.removeAt(0);
+      }
+
+      final time = DateTime.now()
+          .toIso8601String()
+          .substring(11, 19);
+
+      _logs.add('$time  $text');
+    });
+  }
+
+  /* ==========================================================
+     BLUETOOTH PERMISSION
+     ========================================================== */
+
+  Future<bool>
+      _requestBluetoothPermissions() async {
+    if (!Platform.isAndroid) {
+      return true;
+    }
+
+    final statuses = await [
+      Permission.bluetoothConnect,
+      Permission.bluetoothScan,
+    ].request();
+
+    final connect =
+        statuses[
+                Permission.bluetoothConnect]
+            ?.isGranted ??
+            false;
+
+    final scan =
+        statuses[
+                Permission.bluetoothScan]
+            ?.isGranted ??
+            false;
+
+    if (!connect || !scan) {
+      final location =
+          await Permission.location.request();
+
+      if (!location.isGranted &&
+          (!connect || !scan)) {
+        return false;
+      }
     }
 
     return true;
   }
 
   /* ==========================================================
-     BLUETOOTH DEVICES
+     SELECT BLUETOOTH DEVICE
      ========================================================== */
 
-  Future<void> _selectBluetoothDevice() async {
-    if (_connecting) return;
-
-    final granted = await _requestBluetoothPermissions();
+  Future<void>
+      _selectBluetoothDevice() async {
+    final granted =
+        await _requestBluetoothPermissions();
 
     if (!granted) {
-      _showMessage(
-        'دسترسی Bluetooth برای اتصال لازم است.',
+      _snack(
+        'مجوزهای لازم بلوتوث صادر نشده است.',
       );
       return;
     }
 
-    final bluetooth = FlutterBluetoothSerial.instance;
+    List<BluetoothDevice> devices;
 
-    final enabled = await bluetooth.isEnabled ?? false;
-
-    if (!enabled) {
-      _showMessage(
-        'ابتدا Bluetooth گوشی را روشن کنید.',
+    try {
+      devices =
+          await FlutterBluetoothSerial
+              .instance
+              .getBondedDevices();
+    } catch (e) {
+      _snack(
+        'خطای دسترسی به بلوتوث: $e',
       );
       return;
     }
-
-    final devices = await bluetooth.getBondedDevices();
 
     if (!mounted) return;
 
-    if (devices.isEmpty) {
-      _showMessage(
-        'هیچ دستگاه Bluetooth جفت‌شده‌ای پیدا نشد.',
-      );
-      return;
-    }
-
-    final selected = await showDialog<BluetoothDevice>(
+    final selected =
+        await showModalBottomSheet<
+            BluetoothDevice>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('انتخاب آداپتور دیاگ'),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: devices.length,
-              itemBuilder: (context, index) {
-                final device = devices[index];
-
-                return ListTile(
-                  leading: const Icon(
-                    Icons.bluetooth,
-                  ),
-                  title: Text(
-                    device.name ?? 'Unknown',
-                  ),
-                  subtitle: Text(
-                    device.address,
-                  ),
-                  onTap: () {
-                    Navigator.pop(
-                      context,
-                      device,
-                    );
-                  },
-                );
-              },
+      backgroundColor:
+          const Color(0xFF10141E),
+      builder: (_) {
+        return SafeArea(
+          child: SizedBox(
+            height: min(
+              MediaQuery.of(context)
+                      .size
+                      .height *
+                  .65,
+              560,
             ),
+            child: devices.isEmpty
+                ? const Center(
+                    child: Text(
+                      'دانگل Pair شده‌ای پیدا نشد.',
+                    ),
+                  )
+                : ListView.builder(
+                    padding:
+                        const EdgeInsets.all(
+                      12,
+                    ),
+                    itemCount:
+                        devices.length,
+                    itemBuilder:
+                        (_, index) {
+                      final device =
+                          devices[index];
+
+                      return ListTile(
+                        leading:
+                            const Icon(
+                          Icons.bluetooth,
+                          color:
+                              Color(0xFF00F0FF),
+                        ),
+                        title: Text(
+                          device.name ??
+                              'OBD Adapter',
+                        ),
+                        subtitle:
+                            Text(
+                          device.address,
+                        ),
+                        onTap: () {
+                          Navigator.pop(
+                            context,
+                            device,
+                          );
+                        },
+                      );
+                    },
+                  ),
           ),
         );
       },
     );
 
-    if (selected == null) return;
-
-    await _connectToDevice(selected);
+    if (selected != null) {
+      await _connect(selected);
+    }
   }
 
   /* ==========================================================
      CONNECT
      ========================================================== */
 
-  Future<void> _connectToDevice(
+  Future<void> _connect(
     BluetoothDevice device,
   ) async {
     if (_connecting) return;
 
+    await _disconnect();
+
     setState(() {
       _connecting = true;
+
+      _connectionStatus =
+          'در حال اتصال به '
+          '${device.name ?? device.address}';
     });
 
     try {
-      await _disconnect();
-
       final connection =
-          await BluetoothConnection.toAddress(
+          await BluetoothConnection
+              .toAddress(
         device.address,
       );
 
       _connection = connection;
 
-      _inputSubscription =
+      _serialSub =
           connection.input?.listen(
-        _onDataReceived,
+        _onBytes,
+        onError: (error) {
+          _log('RX ERROR $error');
+        },
         onDone: () {
           if (mounted) {
             setState(() {
               _connected = false;
-              _connecting = false;
-            });
-          }
-        },
-        onError: (_) {
-          if (mounted) {
-            setState(() {
-              _connected = false;
-              _connecting = false;
             });
           }
         },
@@ -546,230 +677,406 @@ class _DiagnosticHomeState extends State<DiagnosticHome>
       setState(() {
         _connected = true;
         _connecting = false;
-        _adapterInfo =
-            '${device.name ?? 'Bluetooth'} - ${device.address}';
+
+        _connectionStatus =
+            'دانگل متصل؛ '
+            'در حال شناسایی ECU';
       });
+
+      _log(
+        'CONNECTED '
+        '${device.name ?? device.address}',
+      );
 
       await _initializeAdapter();
 
-      _showMessage(
-        'آداپتور با موفقیت متصل شد.',
-      );
+      await _identifyVehicle();
+
+      _startPolling();
     } catch (e) {
-      await _disconnect();
+      setState(() {
+        _connecting = false;
+        _connected = false;
+        _connectionStatus =
+            'خطا در اتصال';
+      });
 
-      if (mounted) {
-        setState(() {
-          _connecting = false;
-          _connected = false;
-        });
-
-        _showMessage(
-          'خطا در اتصال: $e',
-        );
-      }
+      _snack(
+        'اتصال ناموفق: $e',
+      );
     }
   }
 
   /* ==========================================================
-     DISCONNECT
+     INITIALIZE ELM327
      ========================================================== */
 
-  Future<void> _disconnect() async {
-    _liveTimer?.cancel();
-    _liveTimer = null;
+  Future<void>
+      _initializeAdapter() async {
+    await _sendAndWait(
+      'ATZ',
+      timeout:
+          const Duration(seconds: 3),
+      logCommand: true,
+    );
 
-    await _inputSubscription?.cancel();
-    _inputSubscription = null;
+    await Future.delayed(
+      const Duration(milliseconds: 300),
+    );
+
+    await _sendAndWait(
+      'ATE0',
+      timeout:
+          const Duration(seconds: 1),
+      logCommand: true,
+    );
+
+    await _sendAndWait(
+      'ATL0',
+      timeout:
+          const Duration(seconds: 1),
+      logCommand: true,
+    );
+
+    await _sendAndWait(
+      'ATS0',
+      timeout:
+          const Duration(seconds: 1),
+      logCommand: true,
+    );
+
+    await _sendAndWait(
+      'ATH1',
+      timeout:
+          const Duration(seconds: 1),
+      logCommand: true,
+    );
+
+    final ati =
+        await _sendAndWait(
+      'ATI',
+      timeout:
+          const Duration(seconds: 1),
+      logCommand: true,
+    );
+
+    _adapterInfo =
+        _firstUsefulLine(
+      ati,
+      'ELM/OBD adapter',
+    );
+
+    await _sendAndWait(
+      'ATAT1',
+      timeout:
+          const Duration(seconds: 1),
+      logCommand: true,
+    );
+
+    await _sendAndWait(
+      'ATSP0',
+      timeout:
+          const Duration(seconds: 2),
+      logCommand: true,
+    );
+
+    final dp =
+        await _sendAndWait(
+      'ATDP',
+      timeout:
+          const Duration(seconds: 1),
+      logCommand: true,
+    );
+
+    _protocol =
+        _firstUsefulLine(
+      dp,
+      'Auto',
+    );
+
+    _log(
+      'PROTOCOL $_protocol',
+    );
+  }
+
+  /* ==========================================================
+     APPLY ECU PROFILE
+     ========================================================== */
+
+  Future<void> _applyProfile(
+    EcuProfile profile,
+  ) async {
+    if (!_connected) {
+      _snack(
+        'ابتدا به دانگل متصل شوید.',
+      );
+      return;
+    }
+
+    _pollTimer?.cancel();
+
+    setState(() {
+      _profile = profile;
+
+      _supportsOdometer = false;
+
+      _odometer = 0;
+
+      _odometerStatus =
+          'استعلام نشده';
+    });
+
+    String protocolCommand;
+
+    if (profile.protocol ==
+        'OBD-II') {
+      protocolCommand = 'ATSP0';
+    } else if (profile.protocol
+        .contains('KWP')) {
+      protocolCommand = 'ATSP5';
+    } else {
+      protocolCommand = 'ATSP6';
+    }
+
+    await _sendAndWait(
+      protocolCommand,
+      timeout:
+          const Duration(seconds: 2),
+    );
+
+    if (profile.header != null) {
+      await _sendAndWait(
+        profile.header!,
+        timeout:
+            const Duration(seconds: 1),
+      );
+    }
+
+    _startPolling();
+  }
+
+  /* ==========================================================
+     ECU IDENTIFICATION
+     ========================================================== */
+
+  Future<void>
+      _identifyVehicle() async {
+    if (!_connected ||
+        _scanInProgress) {
+      return;
+    }
+
+    setState(() {
+      _scanInProgress = true;
+
+      _connectionStatus =
+          'در حال شناسایی ECU';
+
+      _ecuModel =
+          'در حال شناسایی...';
+
+      _vin = '---';
+
+      _ecuSoftware = '---';
+    });
 
     try {
-      await _connection?.finish();
-    } catch (_) {}
-
-    _connection = null;
-
-    for (final waiter in _waiters.values) {
-      if (!waiter.isCompleted) {
-        waiter.complete('');
-      }
-    }
-
-    _waiters.clear();
-
-    if (mounted) {
-      setState(() {
-        _connected = false;
-        _connecting = false;
-      });
-    }
-  }
-
-  /* ==========================================================
-     RX DATA
-     ========================================================== */
-
-  void _onDataReceived(Uint8List data) {
-    final text = ascii.decode(
-      data,
-      allowInvalid: true,
-    );
-
-    _rxBuffer.write(text);
-
-    _processReceiveBuffer();
-  }
-
-  void _processReceiveBuffer() {
-    while (true) {
-      final value = _rxBuffer.toString();
-
-      final index = value.indexOf('>');
-
-      if (index < 0) {
-        return;
-      }
-
-      final frame = value.substring(
-        0,
-        index,
+      final dp =
+          await _sendAndWait(
+        'ATDP',
+        timeout:
+            const Duration(seconds: 2),
       );
 
-      _rxBuffer.clear();
-      _rxBuffer.write(
-        value.substring(index + 1),
+      final dpClean =
+          dp.toUpperCase();
+
+      _protocol =
+          _firstUsefulLine(
+        dp,
+        'Unknown',
       );
 
-      final cleaned = frame.trim();
+      _isKwp =
+          dpClean.contains(
+                'ISO 14230',
+              ) ||
+              dpClean.contains(
+                'KWP',
+              ) ||
+              dpClean.contains(
+                'ISO 9141',
+              );
 
-      if (cleaned.isEmpty) {
-        continue;
-      }
-
-      _terminalLog.add(
-        '< $cleaned',
+      final ecuName =
+          await _sendAndWait(
+        '090A',
+        timeout:
+            const Duration(seconds: 2),
       );
 
-      if (_terminalLog.length > 200) {
-        _terminalLog.removeAt(0);
+      final vin =
+          await _sendAndWait(
+        '0902',
+        timeout:
+            const Duration(seconds: 2),
+      );
+
+      final name =
+          _decodeObdAscii(
+        ecuName,
+        '4A0A',
+      );
+
+      final vinText =
+          _decodeObdAscii(
+        vin,
+        '4902',
+      );
+
+      if (name.isNotEmpty) {
+        _ecuModel = name;
       }
 
-      _resolveWaiter(cleaned);
-
-      if (mounted) {
-        setState(() {});
-      }
-    }
-  }
-
-  /* ==========================================================
-     WAITERS
-     ========================================================== */
-
-  void _resolveWaiter(String response) {
-    if (_waiters.isEmpty) return;
-
-    final keys = _waiters.keys.toList();
-
-    for (final key in keys) {
-      final waiter = _waiters[key];
-
-      if (waiter == null || waiter.isCompleted) {
-        _waiters.remove(key);
-        continue;
+      if (vinText.isNotEmpty) {
+        _vin = vinText;
       }
 
-      if (_responseMatches(
-        key,
-        response,
-      )) {
-        waiter.complete(response);
-        _waiters.remove(key);
-        return;
-      }
-    }
-
-    if (_waiters.length == 1) {
-      final key = _waiters.keys.first;
-      final waiter = _waiters[key];
-
-      if (waiter != null && !waiter.isCompleted) {
-        waiter.complete(response);
-        _waiters.remove(key);
-      }
-    }
-  }
-
-  bool _responseMatches(
-    String command,
-    String response,
-  ) {
-    final cmd = command
-        .replaceAll(' ', '')
-        .toUpperCase();
-
-    final res = response
-        .replaceAll(' ', '')
-        .toUpperCase();
-
-    if (res.contains('NO DATA')) return true;
-    if (res.contains('ERROR')) return true;
-    if (res.contains('?')) return true;
-
-    if (cmd.startsWith('01')) {
-      if (cmd.length >= 4) {
-        final pid = cmd.substring(2, 4);
-
-        return res.contains(
-          '41$pid',
+      if (_profile.header != null &&
+          !_isKwp) {
+        await _sendAndWait(
+          _profile.header!,
+          timeout:
+              const Duration(seconds: 1),
         );
       }
-    }
 
-    if (cmd == '03') {
-      return res.contains('43') ||
-          res.contains('NO DATA');
-    }
+      final rpm =
+          await _sendAndWait(
+        '010C',
+        timeout:
+            const Duration(seconds: 2),
+      );
 
-    if (cmd == '04') {
-      return res.contains('44') ||
-          res.contains('OK');
-    }
+      if (_parsePid(
+            rpm,
+            '0C',
+          ) !=
+          null) {
+        if (_ecuModel ==
+                'در حال شناسایی...' ||
+            _ecuModel ==
+                'شناسایی نشده') {
+          _ecuModel =
+              'ECU OBD-II';
+        }
+      }
 
-    return true;
+      _ecuSoftware =
+          'از ECU عمومی قابل تشخیص نیست';
+
+      _connectionStatus =
+          'ECU پاسخ‌گو';
+    } catch (e) {
+      _log(
+        'IDENTIFY ERROR $e',
+      );
+
+      _ecuModel =
+          'شناسایی ناموفق';
+
+      _connectionStatus =
+          'دانگل متصل / ECU نامشخص';
+    } finally {
+      if (mounted) {
+        setState(() {
+          _scanInProgress = false;
+        });
+      }
+    }
   }
 
   /* ==========================================================
-     SEND RAW
+     FIRST USEFUL LINE
      ========================================================== */
 
-  Future<void> _sendRaw(
-    String command,
-  ) async {
-    if (_connection == null) {
-      throw Exception(
-        'Bluetooth connected نیست',
+  String _firstUsefulLine(
+    String value,
+    String fallback,
+  ) {
+    final lines = value
+        .split(RegExp(r'[\r\n]+'))
+        .map(
+          (e) => e.trim(),
+        )
+        .where(
+          (e) =>
+              e.isNotEmpty &&
+              e != '>',
+        )
+        .toList();
+
+    if (lines.isEmpty) {
+      return fallback;
+    }
+
+    return lines.last;
+  }
+
+  /* ==========================================================
+     OBD ASCII DECODER
+     ========================================================== */
+
+  String _decodeObdAscii(
+    String response,
+    String positivePrefix,
+  ) {
+    final clean = response
+        .replaceAll(
+          RegExp(r'\s+'),
+          '',
+        )
+        .toUpperCase();
+
+    final index =
+        clean.indexOf(
+      positivePrefix,
+    );
+
+    if (index < 0) {
+      return '';
+    }
+
+    final hex = clean.substring(
+      index + positivePrefix.length,
+    );
+
+    final bytes = <int>[];
+
+    for (
+      int i = 0;
+      i + 2 <= hex.length;
+      i += 2
+    ) {
+      final byte =
+          int.tryParse(
+        hex.substring(i, i + 2),
+        radix: 16,
       );
+
+      if (byte == null) {
+        break;
+      }
+
+      if (byte >= 0x20 &&
+          byte <= 0x7E) {
+        bytes.add(byte);
+      }
     }
 
-    final cmd = command.trim();
-
-    if (cmd.isEmpty) return;
-
-    _terminalLog.add(
-      '> $cmd',
-    );
-
-    if (_terminalLog.length > 200) {
-      _terminalLog.removeAt(0);
-    }
-
-    final bytes = Uint8List.fromList(
-      ascii.encode('$cmd\r'),
-    );
-
-    _connection!.output.add(bytes);
-
-    await _connection!.output.allSent;
+    return String.fromCharCodes(
+      bytes,
+    ).trim();
   }
 
   /* ==========================================================
@@ -779,997 +1086,2133 @@ class _DiagnosticHomeState extends State<DiagnosticHome>
   Future<String> _sendAndWait(
     String command, {
     Duration timeout =
-        const Duration(seconds: 3),
+        const Duration(
+      milliseconds: 1500,
+    ),
+    bool logCommand = false,
   }) async {
-    if (_connection == null) {
+    if (!_connected ||
+        _connection == null) {
       return '';
     }
 
-    final cmd = command.trim();
+    final key = command
+        .toUpperCase()
+        .replaceAll(
+          RegExp(r'\s+'),
+          '',
+        );
 
-    final completer = Completer<String>();
+    if (logCommand) {
+      _log(
+        'TX $command',
+      );
+    }
 
-    _waiters[cmd] = completer;
+    final existing =
+        _waiters[key];
 
-    await _sendRaw(cmd);
+    if (existing != null) {
+      return existing.future;
+    }
+
+    final completer =
+        Completer<String>();
+
+    _waiters[key] = completer;
 
     try {
-      return await completer.future.timeout(
+      _connection!.output.add(
+        Uint8List.fromList(
+          utf8.encode(
+            '$command\r',
+          ),
+        ),
+      );
+
+      await _connection!
+          .output
+          .allSent;
+
+      final result =
+          await completer.future.timeout(
         timeout,
-        onTimeout: () {
-          _waiters.remove(cmd);
-          return '';
-        },
+        onTimeout: () => '',
       );
-    } catch (_) {
-      _waiters.remove(cmd);
-      return '';
+
+      if (logCommand &&
+          result.isNotEmpty) {
+        _log(
+          'RX $result',
+        );
+      }
+
+      return result;
+    } finally {
+      if (identical(
+        _waiters[key],
+        completer,
+      )) {
+        _waiters.remove(key);
+      }
     }
   }
 
   /* ==========================================================
-     ADAPTER INITIALIZATION
+     MANUAL TERMINAL
      ========================================================== */
 
-  Future<void> _initializeAdapter() async {
-    if (!_connected) return;
-
-    final commands = <String>[
-      'ATZ',
-      'ATE0',
-      'ATL0',
-      'ATS0',
-      'ATH1',
-      'ATI',
-      'ATAT1',
-      'ATSP0',
-      'ATDP',
-    ];
-
-    for (final command in commands) {
-      await _sendAndWait(
-        command,
-        timeout: const Duration(seconds: 4),
-      );
-
-      await Future.delayed(
-        const Duration(milliseconds: 150),
-      );
-    }
-
-    final protocol =
-        await _sendAndWait('ATDP');
-
-    if (protocol.isNotEmpty) {
-      _protocolInfo = protocol.trim();
-    }
-
-    await _identifyVehicle();
-  }
-
-  /* ==========================================================
-     SELECT ECU PROFILE
-     ========================================================== */
-
-  Future<void> _applyProfile(
-    EcuProfile profile,
+  Future<void> _sendManual(
+    String command,
   ) async {
     if (!_connected) {
-      _showMessage(
-        'ابتدا به آداپتور متصل شوید.',
+      _snack(
+        'ابتدا به دانگل متصل شوید.',
       );
       return;
     }
 
-    setState(() {
-      _selectedProfile = profile;
-      _ecuModel = profile.model;
-    });
+    final value =
+        command.trim().toUpperCase();
 
-    await _sendAndWait(
-      profile.protocolCommand,
-    );
-
-    await Future.delayed(
-      const Duration(milliseconds: 200),
-    );
-
-    if (profile.family != 'OBD') {
-      await _sendAndWait(
-        'ATSH ${profile.header}',
-      );
+    if (value.isEmpty) {
+      return;
     }
 
-    final protocol =
-        await _sendAndWait('ATDP');
-
-    if (protocol.isNotEmpty) {
-      setState(() {
-        _protocolInfo = protocol.trim();
-      });
-    }
-
-    _showMessage(
-      'پروفایل ${profile.displayName} اعمال شد.',
-    );
-  }
-
-  /* ==========================================================
-     VEHICLE IDENTIFICATION
-     ========================================================== */
-
-  Future<void> _identifyVehicle() async {
-    if (!_connected) return;
-
-    final profile = _selectedProfile;
-
-    if (profile != null &&
-        profile.family == 'KWP') {
-      await _sendAndWait(
-        profile.protocolCommand,
-      );
-
-      await _sendAndWait(
-        'ATSH ${profile.header}',
-      );
-    }
-
-    final protocol =
-        await _sendAndWait('ATDP');
-
-    if (protocol.isNotEmpty) {
-      _protocolInfo = protocol.trim();
-    }
-
-    String vin = '';
-
-    final vinResponse =
+    final response =
         await _sendAndWait(
-      '0902',
-      timeout: const Duration(seconds: 5),
+      value,
+      timeout:
+          const Duration(seconds: 3),
+      logCommand: true,
     );
 
-    if (vinResponse.isNotEmpty) {
-      vin = _decodeObdAscii(
-        vinResponse,
-        service: '4902',
-      );
-    }
-
-    if (vin.isNotEmpty) {
-      _vin = vin;
-    }
-
-    final ecuNameResponse =
-        await _sendAndWait(
-      '090A',
-      timeout: const Duration(seconds: 4),
-    );
-
-    final ecuName = _decodeObdAscii(
-      ecuNameResponse,
-      service: '490A',
-    );
-
-    if (ecuName.isNotEmpty) {
-      _ecuModel = ecuName;
-    } else if (profile != null) {
-      _ecuModel = profile.model;
-    } else {
-      _ecuModel = 'ECU OBD-II';
-    }
-
-    if (mounted) {
-      setState(() {});
+    if (response.isEmpty) {
+      _log('TIMEOUT');
     }
   }
 
   /* ==========================================================
-     OBD ASCII DECODER
+     RECEIVE BYTES
      ========================================================== */
 
-  String _decodeObdAscii(
-    String response, {
-    required String service,
-  }) {
-    final cleaned = response
-        .replaceAll('\r', ' ')
-        .replaceAll('\n', ' ')
-        .replaceAll('>', ' ')
-        .trim();
+  void _onBytes(
+    Uint8List data,
+  ) {
+    _buffer += utf8.decode(
+      data,
+      allowMalformed: true,
+    );
 
-    final normalized =
-        cleaned.toUpperCase();
+    while (_buffer.contains('>')) {
+      final index =
+          _buffer.indexOf('>');
+
+      final response =
+          _buffer
+              .substring(
+                0,
+                index,
+              )
+              .trim();
+
+      _buffer =
+          _buffer.substring(
+        index + 1,
+      );
+
+      if (response.isEmpty) {
+        continue;
+      }
+
+      _log(
+        'RX $response',
+      );
+
+      _resolveWaiter(
+        response,
+      );
+
+      _parseResponse(
+        response,
+      );
+    }
+  }
+
+  /* ==========================================================
+     RESOLVE RESPONSE
+     ========================================================== */
+
+  void _resolveWaiter(
+    String response,
+  ) {
+    final clean = response
+        .replaceAll(
+          RegExp(r'\s+'),
+          '',
+        )
+        .toUpperCase();
+
+    if (_waiters.isEmpty) {
+      return;
+    }
+
+    String? key;
+
+    if (clean.contains('41')) {
+      final index =
+          clean.indexOf('41');
+
+      if (index + 4 <=
+          clean.length) {
+        key =
+            '01${clean.substring(index + 2, index + 4)}';
+      }
+    } else if (clean.contains('49')) {
+      final index =
+          clean.indexOf('49');
+
+      if (index + 4 <=
+          clean.length) {
+        key =
+            '09${clean.substring(index + 2, index + 4)}';
+      }
+    } else if (clean.contains('43')) {
+      key = '03';
+    } else if (clean.contains('44')) {
+      key = '04';
+    }
+
+    if (key != null &&
+        _waiters.containsKey(key)) {
+      final completer =
+          _waiters.remove(key)!;
+
+      if (!completer.isCompleted) {
+        completer.complete(
+          response,
+        );
+      }
+
+      return;
+    }
+
+    /*
+     * AT commands generally do not have
+     * a PID-based positive response.
+     */
+    if (_waiters.length == 1) {
+      final completer =
+          _waiters.values.first;
+
+      if (!completer.isCompleted) {
+        completer.complete(
+          response,
+        );
+      }
+    }
+  }
+
+  /* ==========================================================
+     PID PARSER
+     ========================================================== */
+
+  int? _parsePid(
+    String response,
+    String pid,
+  ) {
+    final clean = response
+        .replaceAll(
+          RegExp(r'\s+'),
+          '',
+        )
+        .toUpperCase();
+
+    final index =
+        clean.indexOf(
+      '41$pid',
+    );
+
+    if (index < 0) {
+      return null;
+    }
 
     final start =
-        normalized.indexOf(service);
+        index + 4;
 
-    if (start < 0) {
-      return '';
+    if (start + 2 >
+        clean.length) {
+      return null;
     }
 
-    final hexPart =
-        normalized.substring(start + service.length);
+    return int.tryParse(
+      clean.substring(
+        start,
+        start + 2,
+      ),
+      radix: 16,
+    );
+  }
 
-    final hexTokens = RegExp(
-      r'[0-9A-F]{2}',
-    ).allMatches(hexPart);
+  /* ==========================================================
+     PARSE RESPONSE
+     ========================================================== */
 
-    final bytes = <int>[];
+  void _parseResponse(
+    String response,
+  ) {
+    final clean = response
+        .replaceAll(
+          RegExp(r'\s+'),
+          '',
+        )
+        .toUpperCase();
 
-    for (final match in hexTokens) {
-      final value = int.tryParse(
-        match.group(0)!,
-        radix: 16,
+    if (clean.contains(
+          'SEARCHING',
+        ) ||
+        clean.contains(
+          'NO DATA',
+        ) ||
+        clean.contains(
+          'ERROR',
+        ) ||
+        clean.contains(
+          'STOPPED',
+        )) {
+      return;
+    }
+
+    final trimmed =
+        response.trim().toUpperCase();
+
+    if (RegExp(
+      r'^\d+(\.\d+)?V',
+    ).hasMatch(trimmed)) {
+      final voltage =
+          double.tryParse(
+        trimmed.replaceAll(
+          'V',
+          '',
+        ),
       );
 
-      if (value != null &&
-          value >= 0x20 &&
-          value <= 0x7E) {
-        bytes.add(value);
+      if (voltage != null &&
+          mounted) {
+        setState(() {
+          _voltage =
+              voltage;
+        });
       }
     }
 
-    if (bytes.isEmpty) {
-      return '';
+    final pids =
+        <String, void Function(int)>{
+      '0C': (value) {
+        _rpm = value;
+      },
+      '0D': (value) {
+        _speed = value;
+      },
+      '05': (value) {
+        _coolant =
+            value - 40;
+      },
+      '11': (value) {
+        _throttle =
+            ((value * 100) / 255)
+                .round();
+      },
+      '04': (value) {
+        _engineLoad =
+            ((value * 100) / 255)
+                .round();
+      },
+      '0F': (value) {
+        _iat =
+            value - 40;
+      },
+      '14': (value) {
+        _o2 =
+            value / 200.0;
+      },
+    };
+
+    for (final entry
+        in pids.entries) {
+      final value =
+          _parsePid(
+        response,
+        entry.key,
+      );
+
+      if (value != null &&
+          mounted) {
+        setState(() {
+          entry.value(
+            value,
+          );
+        });
+      }
     }
 
-    return String.fromCharCodes(bytes).trim();
-  }
-}
-/* ============================================================
-   LIVE DATA
-   ============================================================ */
-
-Future<void> _readLiveData() async {
-  if (!_connected || _isBusy) return;
-
-  _isBusy = true;
-
-  try {
-    final data = LiveData();
-
-    final rpm = await _sendAndWait(
-      '010C',
-      timeout: const Duration(seconds: 2),
-    );
-
-    data.rpm = _parseRpm(rpm);
-
-    final speed = await _sendAndWait(
-      '010D',
-      timeout: const Duration(seconds: 2),
-    );
-
-    data.speed = _parseSpeed(speed);
-
-    final coolant = await _sendAndWait(
-      '0105',
-      timeout: const Duration(seconds: 2),
-    );
-
-    data.coolant = _parseTemperature(
-      coolant,
-      '4105',
-    );
-
-    final throttle = await _sendAndWait(
-      '0111',
-      timeout: const Duration(seconds: 2),
-    );
-
-    data.throttle = _parsePercentage(
-      throttle,
-      '4111',
-    );
-
-    final load = await _sendAndWait(
-      '0104',
-      timeout: const Duration(seconds: 2),
-    );
-
-    data.engineLoad = _parsePercentage(
-      load,
-      '4104',
-    );
-
-    final intake = await _sendAndWait(
-      '010F',
-      timeout: const Duration(seconds: 2),
-    );
-
-    data.intakeAir = _parseTemperature(
-      intake,
-      '410F',
-    );
-
-    final oxygen = await _sendAndWait(
-      '0114',
-      timeout: const Duration(seconds: 2),
-    );
-
-    data.oxygen = _parseOxygen(
-      oxygen,
-    );
-
-    final battery = await _sendAndWait(
-      'ATRV',
-      timeout: const Duration(seconds: 2),
-    );
-
-    data.battery = _parseBattery(
-      battery,
-    );
-
-    if (mounted) {
-      setState(() {
-        _liveData = data;
-      });
-    }
-  } finally {
-    _isBusy = false;
-  }
-}
-
-/* ============================================================
-   LIVE DATA TIMER
-   ============================================================ */
-
-void _startLiveData() {
-  _liveTimer?.cancel();
-
-  if (!_connected) {
-    return;
-  }
-
-  _liveTimer = Timer.periodic(
-    const Duration(seconds: 1),
-    (_) async {
-      await _readLiveData();
-    },
-  );
-
-  _readLiveData();
-}
-
-void _stopLiveData() {
-  _liveTimer?.cancel();
-  _liveTimer = null;
-}
-
-/* ============================================================
-   OBD PARSING
-   ============================================================ */
-
-List<int> _extractHexBytes(
-  String response,
-) {
-  final cleaned = response
-      .replaceAll('\r', ' ')
-      .replaceAll('\n', ' ')
-      .replaceAll('>', ' ')
-      .replaceAll(':', ' ')
-      .toUpperCase();
-
-  final matches = RegExp(
-    r'\b[0-9A-F]{2}\b',
-  ).allMatches(cleaned);
-
-  final bytes = <int>[];
-
-  for (final match in matches) {
-    final value = int.tryParse(
-      match.group(0)!,
-      radix: 16,
-    );
-
-    if (value != null) {
-      bytes.add(value);
+    if (clean.contains('43')) {
+      _parseDtc(clean);
     }
   }
 
-  return bytes;
-}
+  /* ==========================================================
+     DTC PARSER
+     ========================================================== */
 
-double? _parseRpm(
-  String response,
-) {
-  final bytes = _extractHexBytes(
-    response,
-  );
+  void _parseDtc(
+    String clean,
+  ) {
+    final index =
+        clean.indexOf('43');
 
-  for (var i = 0; i < bytes.length - 3; i++) {
-    if (bytes[i] == 0x41 &&
-        bytes[i + 1] == 0x0C) {
-      final a = bytes[i + 2];
-      final b = bytes[i + 3];
-
-      return ((a * 256) + b) / 4.0;
+    if (index < 0) {
+      return;
     }
-  }
 
-  return null;
-}
-
-double? _parseSpeed(
-  String response,
-) {
-  final bytes = _extractHexBytes(
-    response,
-  );
-
-  for (var i = 0; i < bytes.length - 2; i++) {
-    if (bytes[i] == 0x41 &&
-        bytes[i + 1] == 0x0D) {
-      return bytes[i + 2].toDouble();
-    }
-  }
-
-  return null;
-}
-
-double? _parseTemperature(
-  String response,
-  String service,
-) {
-  final serviceBytes = _hexPairList(
-    service,
-  );
-
-  if (serviceBytes.length != 2) {
-    return null;
-  }
-
-  final bytes = _extractHexBytes(
-    response,
-  );
-
-  for (var i = 0; i < bytes.length - 2; i++) {
-    if (bytes[i] == serviceBytes[0] &&
-        bytes[i + 1] == serviceBytes[1]) {
-      return bytes[i + 2] - 40.0;
-    }
-  }
-
-  return null;
-}
-
-double? _parsePercentage(
-  String response,
-  String service,
-) {
-  final serviceBytes = _hexPairList(
-    service,
-  );
-
-  if (serviceBytes.length != 2) {
-    return null;
-  }
-
-  final bytes = _extractHexBytes(
-    response,
-  );
-
-  for (var i = 0; i < bytes.length - 2; i++) {
-    if (bytes[i] == serviceBytes[0] &&
-        bytes[i + 1] == serviceBytes[1]) {
-      return bytes[i + 2] * 100.0 / 255.0;
-    }
-  }
-
-  return null;
-}
-
-double? _parseOxygen(
-  String response,
-) {
-  final bytes = _extractHexBytes(
-    response,
-  );
-
-  for (var i = 0; i < bytes.length - 3; i++) {
-    if (bytes[i] == 0x41 &&
-        bytes[i + 1] == 0x14) {
-      final a = bytes[i + 2];
-      final b = bytes[i + 3];
-
-      return a / 200.0;
-    }
-  }
-
-  return null;
-}
-
-double? _parseBattery(
-  String response,
-) {
-  final normalized = response
-      .replaceAll('\r', ' ')
-      .replaceAll('\n', ' ')
-      .replaceAll('>', ' ')
-      .trim();
-
-  final match = RegExp(
-    r'([0-9]+(?:\.[0-9]+)?)',
-  ).firstMatch(normalized);
-
-  if (match == null) {
-    return null;
-  }
-
-  return double.tryParse(
-    match.group(1)!,
-  );
-}
-
-List<int> _hexPairList(
-  String value,
-) {
-  final result = <int>[];
-
-  final clean = value
-      .replaceAll(' ', '')
-      .toUpperCase();
-
-  for (var i = 0; i + 1 < clean.length; i += 2) {
-    final byte = int.tryParse(
-      clean.substring(i, i + 2),
-      radix: 16,
+    final bytes =
+        clean.substring(
+      index + 2,
     );
 
-    if (byte != null) {
-      result.add(byte);
+    final result =
+        <String>[];
+
+    for (
+      int i = 0;
+      i + 4 <= bytes.length;
+      i += 4
+    ) {
+      final a =
+          int.tryParse(
+        bytes.substring(
+          i,
+          i + 2,
+        ),
+        radix: 16,
+      );
+
+      final b =
+          int.tryParse(
+        bytes.substring(
+          i + 2,
+          i + 4,
+        ),
+        radix: 16,
+      );
+
+      if (a == null ||
+          b == null ||
+          (a == 0 &&
+              b == 0)) {
+        continue;
+      }
+
+      final prefix =
+          const [
+            'P',
+            'C',
+            'B',
+            'U',
+          ][(a >> 6) & 3];
+
+      final code =
+          '$prefix'
+          '${(a & 0x3F).toRadixString(16).padLeft(2, '0')}'
+          '${b.toRadixString(16).padLeft(2, '0')}'
+              .toUpperCase();
+
+      result.add(code);
     }
-  }
-
-  return result;
-}
-
-/* ============================================================
-   DTC SCAN
-   ============================================================ */
-
-Future<void> _scanDtc() async {
-  if (!_connected) {
-    _showMessage(
-      'ابتدا به خودرو متصل شوید.',
-    );
-    return;
-  }
-
-  if (_isBusy) return;
-
-  _isBusy = true;
-
-  try {
-    final response = await _sendAndWait(
-      '03',
-      timeout: const Duration(seconds: 5),
-    );
-
-    final parsed = _parseObdDtcs(
-      response,
-    );
 
     if (mounted) {
       setState(() {
         _dtcs
           ..clear()
-          ..addAll(parsed);
+          ..addAll(
+            result.toSet(),
+          );
+
+        _loadingDtc = false;
       });
     }
+  }
 
-    if (parsed.isEmpty) {
-      _showMessage(
-        'خطایی از نوع OBD-II پیدا نشد.',
+  /* ==========================================================
+     SCAN DTC
+     ========================================================== */
+
+  Future<void> _scanDtc() async {
+    if (!_connected) {
+      _snack(
+        'ابتدا اتصال ECU را برقرار کنید.',
       );
-    } else {
-      _showMessage(
-        '${parsed.length} کد خطا پیدا شد.',
-      );
+      return;
     }
-  } finally {
-    _isBusy = false;
-  }
-}
 
-/* ============================================================
-   CLEAR DTC
-   ============================================================ */
+    _pollTimer?.cancel();
 
-Future<void> _clearDtc() async {
-  if (!_connected) {
-    _showMessage(
-      'ابتدا به خودرو متصل شوید.',
-    );
-    return;
-  }
-
-  final confirmed =
-      await showDialog<bool>(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: const Text(
-          'پاک کردن خطاها',
-        ),
-        content: const Text(
-          'این عملیات کدهای خطای ذخیره‌شده را پاک می‌کند. '
-          'آیا مطمئن هستید؟',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(
-                context,
-                false,
-              );
-            },
-            child: const Text(
-              'انصراف',
-            ),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(
-                context,
-                true,
-              );
-            },
-            child: const Text(
-              'پاک کردن',
-            ),
-          ),
-        ],
-      );
-    },
-  );
-
-  if (confirmed != true) {
-    return;
-  }
-
-  final response = await _sendAndWait(
-    '04',
-    timeout: const Duration(seconds: 5),
-  );
-
-  if (response.contains('44') ||
-      response.contains('OK')) {
     setState(() {
+      _loadingDtc = true;
       _dtcs.clear();
     });
 
-    _showMessage(
-      'درخواست پاک کردن خطا ارسال شد.',
+    final response =
+        await _sendAndWait(
+      '03',
+      timeout:
+          const Duration(seconds: 4),
+      logCommand: true,
     );
-  } else {
-    _showMessage(
-      'ECU پاسخ مثبت برای پاک کردن خطا نداد.',
-    );
-  }
-}
 
-/* ============================================================
-   DTC DECODER
-   ============================================================ */
-
-List<DtcItem> _parseObdDtcs(
-  String response,
-) {
-  final bytes = _extractHexBytes(
-    response,
-  );
-
-  final result = <DtcItem>[];
-
-  for (var i = 0; i + 1 < bytes.length; i++) {
-    if (bytes[i] != 0x43) {
-      continue;
+    if (response.isEmpty &&
+        mounted) {
+      setState(() {
+        _loadingDtc = false;
+      });
     }
 
-    for (
-      var j = i + 1;
-      j + 1 < bytes.length;
-      j += 2
-    ) {
-      final a = bytes[j];
-      final b = bytes[j + 1];
+    _startPolling();
+  }
 
-      if (a == 0 && b == 0) {
-        continue;
-      }
+  /* ==========================================================
+     CLEAR DTC
+     ========================================================== */
 
-      final code = _decodeDtc(
-        a,
-        b,
-      );
-
-      if (code == null) {
-        continue;
-      }
-
-      if (result.any(
-        (item) => item.code == code,
-      )) {
-        continue;
-      }
-
-      result.add(
-        DtcItem(
-          code: code,
-          description:
-              dtcDescriptions[code] ??
-                  'شرح این کد در بانک اطلاعاتی موجود نیست.',
-        ),
-      );
+  Future<void> _clearDtc() async {
+    if (!_connected) {
+      return;
     }
 
-    break;
-  }
-
-  return result;
-}
-
-String? _decodeDtc(
-  int a,
-  int b,
-) {
-  final first =
-      (a >> 6) & 0x03;
-
-  const prefixes = [
-    'P',
-    'C',
-    'B',
-    'U',
-  ];
-
-  final prefix =
-      prefixes[first];
-
-  final digit2 =
-      (a >> 4) & 0x03;
-
-  final digit3 =
-      a & 0x0F;
-
-  final digit4 =
-      (b >> 4) & 0x0F;
-
-  final digit5 =
-      b & 0x0F;
-
-  return '$prefix'
-      '$digit2'
-      '${digit3.toRadixString(16).toUpperCase()}'
-      '${digit4.toRadixString(16).toUpperCase()}'
-      '${digit5.toRadixString(16).toUpperCase()}';
-}
-
-/* ============================================================
-   ECU INFORMATION
-   ============================================================ */
-
-Future<void> _readEcuInformation() async {
-  if (!_connected) {
-    _showMessage(
-      'ابتدا به آداپتور متصل شوید.',
-    );
-    return;
-  }
-
-  await _identifyVehicle();
-
-  final software =
-      await _sendAndWait(
-    '090A',
-    timeout: const Duration(seconds: 4),
-  );
-
-  final decoded =
-      _decodeObdAscii(
-    software,
-    service: '490A',
-  );
-
-  if (decoded.isNotEmpty) {
-    setState(() {
-      _ecuSoftware = decoded;
-    });
-  }
-
-  final protocol =
-      await _sendAndWait(
-    'ATDP',
-    timeout: const Duration(seconds: 3),
-  );
-
-  if (protocol.isNotEmpty) {
-    setState(() {
-      _protocolInfo =
-          protocol.trim();
-    });
-  }
-}
-
-/* ============================================================
-   ODOMETER
-   ============================================================ */
-
-Future<void> _readOdometer() async {
-  /*
-   * عمداً از PID عمومی 01A6 به عنوان کیلومتر واقعی
-   * استفاده نمی‌شود.
-   *
-   * کیلومتر واقعی خودرو وابسته به ECU / BCM / IPC
-   * و DID یا سرویس اختصاصی همان خودرو است.
-   *
-   * بنابراین تا زمانی که تعریف دقیق ECU مشخص نشده
-   * مقدار جعلی نمایش داده نمی‌شود.
-   */
-
-  _showMessage(
-    'کارکرد واقعی برای این ECU هنوز با تعریف اختصاصی فعال نشده است.',
-  );
-}
-
-/* ============================================================
-   ACTUATOR SAFETY
-   ============================================================ */
-
-Future<void> _runActuator(
-  String name,
-) async {
-  if (!_connected) {
-    _showMessage(
-      'ابتدا به ECU متصل شوید.',
-    );
-    return;
-  }
-
-  /*
-   * هیچ فرمان حدسی 2F / 30 / 31 / KWP
-   * به ECU ارسال نمی‌شود.
-   *
-   * برای اجرای واقعی عملگر باید:
-   *
-   * 1. ECU دقیق شناسایی شود.
-   * 2. سرویس و DID/Routine همان ECU مشخص باشد.
-   * 3. پاسخ مثبت ECU بررسی شود.
-   * 4. پیش‌شرط‌های ایمنی بررسی شوند.
-   * 5. فرمان توقف و timeout وجود داشته باشد.
-   */
-
-  final confirmed =
-      await showDialog<bool>(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: const Text(
-          'عملگر',
-        ),
-        content: Text(
-          'عملگر «$name» برای ECU فعلی '
-          'هنوز فرمان معتبر و تأییدشده ندارد.\n\n'
-          'برای جلوگیری از ارسال فرمان اشتباه '
-          'به ECU، عملیات متوقف شد.',
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(
-                context,
-                true,
-              );
-            },
-            child: const Text(
-              'متوجه شدم',
-            ),
+    final confirmed =
+        await showDialog<bool>(
+      context: context,
+      builder: (_) {
+        return AlertDialog(
+          title: const Text(
+            'تأیید پاک‌سازی خطا',
           ),
-        ],
-      );
-    },
-  );
-
-  if (confirmed == true) {
-    return;
-  }
-}
-
-/* ============================================================
-   DEMO MODE
-   ============================================================ */
-
-void _toggleDemoMode() {
-  setState(() {
-    _demoMode = !_demoMode;
-  });
-
-  if (_demoMode) {
-    _liveData = LiveData()
-      ..rpm = 850
-      ..speed = 0
-      ..coolant = 86
-      ..throttle = 7
-      ..engineLoad = 18
-      ..intakeAir = 32
-      ..oxygen = 0.72
-      ..battery = 13.9;
-
-    _ecuModel =
-        'DEMO ECU - RASA DIAG';
-
-    _protocolInfo =
-        'DEMO / OBD-II';
-
-    _vin =
-        'DEMO-VIN-000000000';
-
-    _ecuSoftware =
-        'DEMO SOFTWARE 1.0';
-  } else {
-    _liveData = LiveData();
-
-    _ecuModel =
-        'شناسایی نشده';
-
-    _protocolInfo = '-';
-
-    _vin =
-        'نامشخص';
-
-    _ecuSoftware =
-        'نامشخص';
-  }
-}
-
-/* ============================================================
-   TERMINAL
-   ============================================================ */
-
-Future<void> _sendTerminalCommand() async {
-  final command =
-      _terminalController.text.trim();
-
-  if (command.isEmpty) {
-    return;
-  }
-
-  _terminalController.clear();
-
-  if (!_connected) {
-    _showMessage(
-      'آداپتور متصل نیست.',
+          content: const Text(
+            'پاک کردن DTC ممکن است '
+            'مانیتورهای OBD را Reset کند. '
+            'ادامه می‌دهید؟',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(
+                  context,
+                  false,
+                );
+              },
+              child: const Text(
+                'انصراف',
+              ),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(
+                  context,
+                  true,
+                );
+              },
+              child: const Text(
+                'پاک کن',
+              ),
+            ),
+          ],
+        );
+      },
     );
-    return;
+
+    if (confirmed != true) {
+      return;
+    }
+
+    setState(() {
+      _clearingDtc = true;
+    });
+
+    final response =
+        await _sendAndWait(
+      '04',
+      timeout:
+          const Duration(seconds: 4),
+      logCommand: true,
+    );
+
+    setState(() {
+      _clearingDtc = false;
+
+      if (response.isNotEmpty &&
+          !response
+              .toUpperCase()
+              .contains('ERROR')) {
+        _dtcs.clear();
+      }
+    });
+
+    _startPolling();
   }
 
-  await _sendRaw(
-    command,
-  );
+  /* ==========================================================
+     ODOMETER
+     ========================================================== */
 
-  if (mounted) {
-    setState(() {});
+  Future<void> _readOdometer() async {
+    if (!_connected) {
+      return;
+    }
+
+    setState(() {
+      _odometerStatus =
+          'در حال استعلام...';
+    });
+
+    /*
+     * 01A6 به عنوان کیلومتر واقعی
+     * استفاده نمی‌شود.
+     *
+     * کیلومتر واقعی خودرو وابسته به ECU،
+     * BCM، IPC و DID اختصاصی خودرو است.
+     */
+
+    setState(() {
+      _supportsOdometer = false;
+
+      _odometer = 0;
+
+      _odometerStatus =
+          'از ECU عمومی قابل استخراج نیست';
+    });
+
+    _log(
+      'ODOMETER: generic request disabled; vehicle-specific DID required',
+    );
   }
-}
 
-/* ============================================================
-   MESSAGE
-   ============================================================ */
+  /* ==========================================================
+     ACTUATORS
+     ========================================================== */
 
-void _showMessage(
-  String message,
-) {
-  if (!mounted) return;
+  Future<void> _runActuator(
+    String name,
+  ) async {
+    if (!_connected) {
+      _snack(
+        'ابتدا ECU را متصل کنید.',
+      );
+      return;
+    }
 
-  ScaffoldMessenger.of(context)
-    ..hideCurrentSnackBar()
-    ..showSnackBar(
+    /*
+     * هیچ فرمان حدسی برای 2F / 30 / 31
+     * یا KWP به ECU ارسال نمی‌شود.
+     *
+     * فرمان واقعی عملگر باید بر اساس ECU
+     * دقیق، Session، Service، Identifier،
+     * Positive Response و Stop Command
+     * تعریف شود.
+     */
+
+    await showDialog(
+      context: context,
+      builder: (_) {
+        return AlertDialog(
+          title: Text(name),
+          content: const Text(
+            'این عملگر در بانک اطلاعاتی ECU فعلی '
+            'فرمان معتبر و تأییدشده ندارد.\n\n'
+            'برای جلوگیری از آسیب به ECU یا خودرو، '
+            'RASA هیچ فرمان حدسی 2F/30/31 ارسال نمی‌کند.\n\n'
+            'پس از تعریف فرمان اختصاصی همین ECU، '
+            'تست از این قسمت فعال می‌شود.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(
+                  context,
+                );
+              },
+              child: const Text(
+                'متوجه شدم',
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /* ==========================================================
+     LIVE DATA POLLING
+     ========================================================== */
+
+  void _startPolling() {
+    _pollTimer?.cancel();
+
+    if (!_connected ||
+        _activeActuator
+            .isNotEmpty) {
+      return;
+    }
+
+    _pollIndex = 0;
+
+    const commands = [
+      '010C',
+      '010D',
+      '0105',
+      '0111',
+      '0104',
+      '010F',
+      '0114',
+      'ATRV',
+    ];
+
+    _pollTimer =
+        Timer.periodic(
+      const Duration(
+        milliseconds: 450,
+      ),
+      (_) async {
+        if (!_connected ||
+            _requestInFlight ||
+            _activeActuator
+                .isNotEmpty) {
+          return;
+        }
+
+        _requestInFlight = true;
+
+        try {
+          final command =
+              commands[
+                  _pollIndex %
+                      commands.length];
+
+          _pollIndex++;
+
+          await _sendAndWait(
+            command,
+            timeout:
+                const Duration(
+              milliseconds: 900,
+            ),
+          );
+        } finally {
+          _requestInFlight = false;
+        }
+      },
+    );
+  }
+
+  /* ==========================================================
+     DEMO MODE
+     ========================================================== */
+
+  void _toggleDemo(
+    bool enable,
+  ) {
+    _demoTimer?.cancel();
+
+    _pollTimer?.cancel();
+
+    if (enable && _connected) {
+      _disconnect();
+    }
+
+    setState(() {
+      _demo = enable;
+    });
+
+    if (!enable) {
+      return;
+    }
+
+    final random =
+        Random();
+
+    _demoTimer =
+        Timer.periodic(
+      const Duration(
+        milliseconds: 300,
+      ),
+      (_) {
+        if (!mounted) return;
+
+        setState(() {
+          _speed =
+              (_speed +
+                      random.nextInt(7) -
+                      3)
+                  .clamp(
+                    0,
+                    180,
+                  );
+
+          _rpm =
+              (_speed * 30 +
+                      850 +
+                      random.nextInt(
+                        250,
+                      ))
+                  .clamp(
+                    800,
+                    6500,
+                  );
+
+          _coolant =
+              88 +
+                  random.nextInt(
+                    5,
+                  );
+
+          _throttle =
+              (_speed / 2.0)
+                  .round()
+                  .clamp(
+                    0,
+                    100,
+                  );
+
+          _engineLoad =
+              (15 +
+                      _speed /
+                          2.5)
+                  .round()
+                  .clamp(
+                    15,
+                    95,
+                  );
+
+          _iat = 30;
+
+          _voltage =
+              13.8 +
+                  random.nextDouble() *
+                      .3;
+
+          _o2 =
+              .35 +
+                  random.nextDouble() *
+                      .45;
+
+          _ecuModel =
+              'DEMO ECU';
+
+          _protocol =
+              'DEMO';
+        });
+      },
+    );
+  }
+
+  /* ==========================================================
+     DISCONNECT
+     ========================================================== */
+
+  Future<void> _disconnect() async {
+    _pollTimer?.cancel();
+
+    _pollTimer = null;
+
+    await _serialSub?.cancel();
+
+    _serialSub = null;
+
+    try {
+      await _connection?.finish();
+    } catch (_) {}
+
+    try {
+      _connection?.dispose();
+    } catch (_) {}
+
+    _connection = null;
+
+    if (mounted) {
+      setState(() {
+        _connected = false;
+        _connecting = false;
+        _activeActuator = '';
+        _connectionStatus =
+            'آماده اتصال';
+      });
+    }
+  }
+
+  /* ==========================================================
+     SNACK
+     ========================================================== */
+
+  void _snack(
+    String message,
+  ) {
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(
       SnackBar(
-        content: Text(message),
-        duration:
-            const Duration(seconds: 2),
+        content: Text(
+          message,
+        ),
       ),
     );
+  }
+
+  /* ==========================================================
+     DISPOSE
+     ========================================================== */
+
+  @override
+  void dispose() {
+    _demoTimer?.cancel();
+
+    _pollTimer?.cancel();
+
+    _serialSub?.cancel();
+
+    _connection?.dispose();
+
+    _tabs.dispose();
+
+    _terminalController.dispose();
+
+    super.dispose();
+  }
+
+  /* ==========================================================
+     BUILD
+     ========================================================== */
+
+  @override
+  Widget build(
+    BuildContext context,
+  ) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'RASA DIAG PRO',
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        actions: [
+          IconButton(
+            onPressed:
+                _identifyVehicle,
+            icon: const Icon(
+              Icons.manage_search_rounded,
+            ),
+            tooltip:
+                'شناسایی ECU',
+          ),
+          IconButton(
+            onPressed:
+                _selectBluetoothDevice,
+            icon: const Icon(
+              Icons.bluetooth_connected_rounded,
+            ),
+            tooltip:
+                'اتصال',
+          ),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value ==
+                  'demo') {
+                _toggleDemo(
+                  !_demo,
+                );
+              }
+
+              if (value ==
+                  'disconnect') {
+                _disconnect();
+              }
+            },
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                value: 'demo',
+                child: Text(
+                  _demo
+                      ? 'خاموش کردن دمو'
+                      : 'حالت دمو',
+                ),
+              ),
+              const PopupMenuItem(
+                value:
+                    'disconnect',
+                child: Text(
+                  'قطع اتصال',
+                ),
+              ),
+            ],
+          ),
+        ],
+        bottom: TabBar(
+          controller: _tabs,
+          isScrollable: true,
+          tabs: const [
+            Tab(
+              icon: Icon(
+                Icons.dashboard_rounded,
+              ),
+              text: 'داشبورد',
+            ),
+            Tab(
+              icon: Icon(
+                Icons.directions_car_rounded,
+              ),
+              text: 'خودرو / ECU',
+            ),
+            Tab(
+              icon: Icon(
+                Icons.sensors_rounded,
+              ),
+              text: 'سنسورها',
+            ),
+            Tab(
+              icon: Icon(
+                Icons.error_outline_rounded,
+              ),
+              text: 'خطاها',
+            ),
+            Tab(
+              icon: Icon(
+                Icons.build_circle_rounded,
+              ),
+              text: 'عملگرها',
+            ),
+            Tab(
+              icon: Icon(
+                Icons.memory_rounded,
+              ),
+              text: 'اطلاعات ECU',
+            ),
+            Tab(
+              icon: Icon(
+                Icons.terminal_rounded,
+              ),
+              text: 'ترمینال',
+            ),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabs,
+        children: [
+          _dashboard(),
+          _vehicleTab(),
+          _sensorsTab(),
+          _dtcTab(),
+          _actuatorTab(),
+          _ecuTab(),
+          _terminalTab(),
+        ],
+      ),
+    );
+  }
+
+  /* ==========================================================
+     DASHBOARD
+     ========================================================== */
+
+  Widget _dashboard() {
+    return ListView(
+      padding:
+          const EdgeInsets.all(14),
+      children: [
+        _statusCard(),
+
+        const SizedBox(
+          height: 12,
+        ),
+
+        Row(
+          children: [
+            Expanded(
+              child: RasaGauge(
+                label:
+                    'دور موتور',
+                value:
+                    '$_rpm',
+                unit:
+                    'RPM',
+                progress:
+                    (_rpm / 7000)
+                        .clamp(
+                          0,
+                          1,
+                        ),
+              ),
+            ),
+
+            const SizedBox(
+              width: 10,
+            ),
+
+            Expanded(
+              child: RasaGauge(
+                label:
+                    'سرعت',
+                value:
+                    '$_speed',
+                unit:
+                    'KM/H',
+                progress:
+                    (_speed / 240)
+                        .clamp(
+                          0,
+                          1,
+                        ),
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(
+          height: 12,
+        ),
+
+        Row(
+          children: [
+            Expanded(
+              child: _metric(
+                'دمای آب',
+                '$_coolant °C',
+                Icons.thermostat,
+              ),
+            ),
+
+            const SizedBox(
+              width: 8,
+            ),
+
+            Expanded(
+              child: _metric(
+                'دریچه گاز',
+                '$_throttle %',
+                Icons.shutter_speed,
+              ),
+            ),
+
+            const SizedBox(
+              width: 8,
+            ),
+
+            Expanded(
+              child: _metric(
+                'ولتاژ',
+                '${_voltage.toStringAsFixed(1)} V',
+                Icons.bolt,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(
+          height: 12,
+        ),
+
+        _ecuMiniCard(),
+
+        const SizedBox(
+          height: 12,
+        ),
+
+        Card(
+          child: ListTile(
+            leading: const Icon(
+              Icons.add_road_rounded,
+              color:
+                  Color(0xFF00F0FF),
+            ),
+            title: const Text(
+              'کارکرد خودرو',
+            ),
+            subtitle:
+                Text(
+              _odometerStatus,
+            ),
+            trailing:
+                FilledButton(
+              onPressed:
+                  _connected
+                      ? _readOdometer
+                      : null,
+              child:
+                  const Text(
+                'استعلام',
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /* ==========================================================
+     STATUS CARD
+     ========================================================== */
+
+  Widget _statusCard() {
+    return Card(
+      child: ListTile(
+        leading: Icon(
+          _connected
+              ? Icons.check_circle
+              : Icons.link_off,
+          color: _connected
+              ? const Color(
+                  0xFF00E676,
+                )
+              : const Color(
+                  0xFFFF2A55,
+                ),
+          size: 30,
+        ),
+        title: Text(
+          _connectionStatus,
+          style:
+              const TextStyle(
+            fontWeight:
+                FontWeight.bold,
+          ),
+        ),
+        subtitle: Text(
+          'Protocol: $_protocol\n'
+          'Adapter: $_adapterInfo',
+        ),
+        trailing: _demo
+            ? const Chip(
+                label: Text(
+                  'DEMO',
+                ),
+              )
+            : null,
+      ),
+    );
+  }
+
+  /* ==========================================================
+     ECU MINI CARD
+     ========================================================== */
+
+  Widget _ecuMiniCard() {
+    return Card(
+      child: ListTile(
+        leading:
+            const CircleAvatar(
+          backgroundColor:
+              Color(0xFF18212C),
+          child: Icon(
+            Icons.memory_rounded,
+            color:
+                Color(0xFF00F0FF),
+          ),
+        ),
+        title: const Text(
+          'ECU شناسایی‌شده',
+          style:
+              TextStyle(
+            fontWeight:
+                FontWeight.bold,
+          ),
+        ),
+        subtitle:
+            Text(_ecuModel),
+        trailing:
+            IconButton(
+          onPressed:
+              _identifyVehicle,
+          icon:
+              const Icon(
+            Icons.refresh_rounded,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /* ==========================================================
+     METRIC
+     ========================================================== */
+
+  Widget _metric(
+    String title,
+    String value,
+    IconData icon,
+  ) {
+    return Card(
+      child: Padding(
+        padding:
+            const EdgeInsets.all(
+          10,
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              color:
+                  const Color(
+                0xFF00F0FF,
+              ),
+            ),
+            const SizedBox(
+              height: 5,
+            ),
+            Text(
+              title,
+              style:
+                  const TextStyle(
+                fontSize: 10,
+                color:
+                    Colors.white54,
+              ),
+            ),
+            const SizedBox(
+              height: 3,
+            ),
+            Text(
+              value,
+              style:
+                  const TextStyle(
+                fontWeight:
+                    FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /* ==========================================================
+     VEHICLE TAB
+     ========================================================== */
+
+  Widget _vehicleTab() {
+    return ListView(
+      padding:
+          const EdgeInsets.all(14),
+      children: [
+        const Text(
+          'انتخاب خانواده ECU',
+          style:
+              TextStyle(
+            fontSize: 18,
+            fontWeight:
+                FontWeight.bold,
+          ),
+        ),
+
+        const SizedBox(
+          height: 8,
+        ),
+
+        ...ecuProfiles.map(
+          (profile) {
+            final can =
+                profile.protocol
+                        .contains(
+                      'CAN',
+                    ) ||
+                    profile.protocol
+                        .contains(
+                      'UDS',
+                    );
+
+            return Card(
+              child: ListTile(
+                leading: Icon(
+                  can
+                      ? Icons
+                          .account_tree_rounded
+                      : Icons
+                          .memory_rounded,
+                  color:
+                      const Color(
+                    0xFF00F0FF,
+                  ),
+                ),
+                title: Text(
+                  profile.title,
+                ),
+                subtitle: Text(
+                  '${profile.family}\n'
+                  '${profile.protocol}'
+                  '${profile.header == null ? '' : ' • ${profile.header}'}',
+                ),
+                isThreeLine: true,
+                trailing:
+                    profile == _profile
+                        ? const Icon(
+                            Icons
+                                .check_circle,
+                            color:
+                                Color(
+                              0xFF00E676,
+                            ),
+                          )
+                        : null,
+                onTap: () =>
+                    _applyProfile(
+                  profile,
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  /* ==========================================================
+     SENSORS TAB
+     ========================================================== */
+
+  Widget _sensorsTab() {
+    return ListView(
+      padding:
+          const EdgeInsets.all(14),
+      children: [
+        _sensor(
+          'RPM',
+          '$_rpm RPM',
+          Icons.speed,
+        ),
+
+        _sensor(
+          'سرعت خودرو',
+          '$_speed km/h',
+          Icons.directions_car,
+        ),
+
+        _sensor(
+          'دمای آب',
+          '$_coolant °C',
+          Icons.thermostat,
+        ),
+
+        _sensor(
+          'دریچه گاز',
+          '$_throttle %',
+          Icons.shutter_speed,
+        ),
+
+        _sensor(
+          'لود موتور',
+          '$_engineLoad %',
+          Icons.compress,
+        ),
+
+        _sensor(
+          'دمای هوای ورودی',
+          '$_iat °C',
+          Icons.air,
+        ),
+
+        _sensor(
+          'سنسور O2',
+          '${_o2.toStringAsFixed(3)} V',
+          Icons.air_rounded,
+        ),
+
+        _sensor(
+          'ولتاژ سیستم',
+          '${_voltage.toStringAsFixed(2)} V',
+          Icons.bolt,
+        ),
+
+        _sensor(
+          'کارکرد',
+          _supportsOdometer
+              ? '${_odometer.toStringAsFixed(0)} KM'
+              : _odometerStatus,
+          Icons.add_road,
+        ),
+      ],
+    );
+  }
+
+  /* ==========================================================
+     SENSOR
+     ========================================================== */
+
+  Widget _sensor(
+    String name,
+    String value,
+    IconData icon,
+  ) {
+    return Card(
+      child: ListTile(
+        leading: Icon(
+          icon,
+          color:
+              const Color(
+            0xFF00F0FF,
+          ),
+        ),
+        title: Text(
+          name,
+        ),
+        trailing: Text(
+          value,
+          style:
+              const TextStyle(
+            fontWeight:
+                FontWeight.bold,
+            color:
+                Color(
+              0xFF00F0FF,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /* ==========================================================
+     DTC TAB
+     ========================================================== */
+
+  Widget _dtcTab() {
+    return Column(
+      children: [
+        Padding(
+          padding:
+              const EdgeInsets.all(
+            12,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child:
+                    FilledButton.icon(
+                  onPressed:
+                      _loadingDtc
+                          ? null
+                          : _scanDtc,
+                  icon:
+                      const Icon(
+                    Icons.search,
+                  ),
+                  label:
+                      const Text(
+                    'اسکن DTC',
+                  ),
+                ),
+              ),
+
+              const SizedBox(
+                width: 10,
+              ),
+
+              Expanded(
+                child:
+                    FilledButton.icon(
+                  onPressed:
+                      _clearingDtc
+                          ? null
+                          : _clearDtc,
+                  style:
+                      FilledButton.styleFrom(
+                    backgroundColor:
+                        const Color(
+                      0xFFFF2A55,
+                    ),
+                  ),
+                  icon:
+                      const Icon(
+                    Icons.delete_sweep,
+                  ),
+                  label:
+                      const Text(
+                    'پاک‌سازی',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        if (_loadingDtc)
+          const LinearProgressIndicator(),
+
+        Expanded(
+          child: _dtcs.isEmpty
+              ? const Center(
+                  child: Text(
+                    'خطایی در حافظه نمایش داده نشده است.',
+                  ),
+                )
+              : ListView.builder(
+                  padding:
+                      const EdgeInsets.all(
+                    12,
+                  ),
+                  itemCount:
+                      _dtcs.length,
+                  itemBuilder:
+                      (_, index) {
+                    final code =
+                        _dtcs[index];
+
+                    return Card(
+                      child: ListTile(
+                        leading:
+                            Text(
+                          code,
+                          style:
+                              const TextStyle(
+                            color:
+                                Color(
+                              0xFFFF2A55,
+                            ),
+                            fontWeight:
+                                FontWeight
+                                    .bold,
+                          ),
+                        ),
+                        title: Text(
+                          dtcDescriptions[
+                                  code] ??
+                              'شرح کارخانه‌ای / Manufacturer Specific',
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  /* ==========================================================
+     ACTUATOR TAB
+     ========================================================== */
+
+  Widget _actuatorTab() {
+    final items = [
+      'فن دور کند',
+      'فن دور تند',
+      'پمپ بنزین / رله دوبل',
+      'شیر برقی کنیستر',
+      'چراغ MIL',
+    ];
+
+    return ListView(
+      padding:
+          const EdgeInsets.all(14),
+      children: [
+        Card(
+          color:
+              const Color(
+            0xFF17120F,
+          ),
+          child: const Padding(
+            padding:
+                EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Icon(
+                  Icons
+                      .warning_amber_rounded,
+                  color:
+                      Color(
+                    0xFFFFD600,
+                  ),
+                ),
+                SizedBox(
+                  width: 10,
+                ),
+                Expanded(
+                  child: Text(
+                    'عملگرها فقط با تعریف دقیق ECU، '
+                    'سشن، سرویس، شناسه و پاسخ مثبت اجرا می‌شوند. '
+                    'RASA فرمان حدسی ارسال نمی‌کند.',
+                    style:
+                        TextStyle(
+                      color:
+                          Colors.white70,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        const SizedBox(
+          height: 10,
+        ),
+
+        ...items.map(
+          (name) => Card(
+            child: ListTile(
+              leading:
+                  const Icon(
+                Icons.build_circle,
+                color:
+                    Color(
+                  0xFF00F0FF,
+                ),
+              ),
+              title: Text(
+                name,
+              ),
+              trailing:
+                  FilledButton(
+                onPressed:
+                    () =>
+                        _runActuator(
+                  name,
+                ),
+                child:
+                    const Text(
+                  'تست',
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /* ==========================================================
+     ECU INFORMATION TAB
+     ========================================================== */
+
+  Widget _ecuTab() {
+    return ListView(
+      padding:
+          const EdgeInsets.all(14),
+      children: [
+        Card(
+          child: ListTile(
+            leading:
+                const Icon(
+              Icons.memory,
+              color:
+                  Color(
+                0xFF00F0FF,
+              ),
+              size: 32,
+            ),
+            title:
+                const Text(
+              'مدل ECU',
+            ),
+            subtitle:
+                Text(
+              _ecuModel,
+              style:
+                  const TextStyle(
+                fontSize: 16,
+                fontWeight:
+                    FontWeight.bold,
+              ),
+            ),
+            trailing:
+                _scanInProgress
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child:
+                            CircularProgressIndicator(),
+                      )
+                    : IconButton(
+                        onPressed:
+                            _identifyVehicle,
+                        icon:
+                            const Icon(
+                          Icons.refresh,
+                        ),
+                      ),
+          ),
+        ),
+
+        _info(
+          'خودرو / خانواده',
+          _profile.family,
+        ),
+
+        _info(
+          'پروتکل',
+          _protocol,
+        ),
+
+        _info(
+          'هدر CAN / KWP',
+          _profile.header ??
+              'Auto / Functional',
+        ),
+
+        _info(
+          'VIN',
+          _vin,
+        ),
+
+        _info(
+          'ECU Software',
+          _ecuSoftware,
+        ),
+
+        _info(
+          'Adapter',
+          _adapterInfo,
+        ),
+
+        const SizedBox(
+          height: 10,
+        ),
+
+        FilledButton.icon(
+          onPressed:
+              _connected
+                  ? _identifyVehicle
+                  : null,
+          icon:
+              const Icon(
+            Icons.manage_search,
+          ),
+          label:
+              const Text(
+            'شناسایی مجدد ECU',
+          ),
+        ),
+      ],
+    );
+  }
+
+  /* ==========================================================
+     INFO
+     ========================================================== */
+
+  Widget _info(
+    String title,
+    String value,
+  ) {
+    return Card(
+      child: ListTile(
+        title: Text(
+          title,
+          style:
+              const TextStyle(
+            color:
+                Colors.white54,
+            fontSize: 12,
+          ),
+        ),
+        subtitle:
+            SelectableText(
+          value,
+          style:
+              const TextStyle(
+            fontSize: 14,
+            fontWeight:
+                FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /* ==========================================================
+     TERMINAL
+     ========================================================== */
+
+  Widget _terminalTab() {
+    return Padding(
+      padding:
+          const EdgeInsets.all(12),
+      child: Column(
+        children: [
+          Expanded(
+            child: Card(
+              child:
+                  ListView.builder(
+                reverse: true,
+                itemCount:
+                    _logs.length,
+                itemBuilder:
+                    (_, index) {
+                  return Padding(
+                    padding:
+                        const EdgeInsets.symmetric(
+                      vertical: 2,
+                    ),
+                    child: Text(
+                      _logs[
+                        _logs.length -
+                            1 -
+                            index
+                      ],
+                      style:
+                          const TextStyle(
+                        fontFamily:
+                            'monospace',
+                        fontSize: 11,
+                        color:
+                            Color(
+                          0xFF00F0FF,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+
+          const SizedBox(
+            height: 8,
+          ),
+
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller:
+                      _terminalController,
+                  decoration:
+                      const InputDecoration(
+                    hintText:
+                        '010C / 03 / ATRV / ATDP',
+                  ),
+                ),
+              ),
+
+              IconButton(
+                onPressed: () {
+                  final command =
+                      _terminalController
+                          .text;
+
+                  _terminalController
+                      .clear();
+
+                  if (command
+                      .isNotEmpty) {
+                    _sendManual(
+                      command,
+                    );
+                  }
+                },
+                icon:
+                    const Icon(
+                  Icons.send,
+                  color:
+                      Color(
+                    0xFF00F0FF,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/* ============================================================
+   GAUGE
+   ============================================================ */
+
+class RasaGauge
+    extends StatelessWidget {
+  final String label;
+  final String value;
+  final String unit;
+  final double progress;
+
+  const RasaGauge({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.unit,
+    required this.progress,
+  });
+
+  @override
+  Widget build(
+    BuildContext context,
+  ) {
+    return Card(
+      child: Padding(
+        padding:
+            const EdgeInsets.all(
+          12,
+        ),
+        child: Column(
+          children: [
+            Text(
+              label,
+              style:
+                  const TextStyle(
+                color:
+                    Colors.white54,
+              ),
+            ),
+
+            const SizedBox(
+              height: 10,
+            ),
+
+            SizedBox(
+              width: 120,
+              height: 120,
+              child: Stack(
+                alignment:
+                    Alignment.center,
+                children: [
+                  CustomPaint(
+                    size:
+                        const Size(
+                      120,
+                      120,
+                    ),
+                    painter:
+                        GaugePainter(
+                      progress:
+                          progress,
+                    ),
+                  ),
+
+                  Column(
+                    mainAxisAlignment:
+                        MainAxisAlignment
+                            .center,
+                    children: [
+                      Text(
+                        value,
+                        style:
+                            const TextStyle(
+                          fontSize: 24,
+                          fontWeight:
+                              FontWeight
+                                  .w900,
+                          color:
+                              Color(
+                            0xFF00F0FF,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        unit,
+                        style:
+                            const TextStyle(
+                          fontSize: 10,
+                          color:
+                              Colors
+                                  .white54,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/* ============================================================
+   GAUGE PAINTER
+   ============================================================ */
+
+class GaugePainter
+    extends CustomPainter {
+  final double progress;
+
+  GaugePainter({
+    required this.progress,
+  });
+
+  @override
+  void paint(
+    Canvas canvas,
+    Size size,
+  ) {
+    final center =
+        Offset(
+      size.width / 2,
+      size.height / 2,
+    );
+
+    final radius =
+        size.width / 2 - 8;
+
+    final background =
+        Paint()
+          ..color =
+              Colors.white10
+          ..style =
+              PaintingStyle.stroke
+          ..strokeWidth = 9
+          ..strokeCap =
+              StrokeCap.round;
+
+    final foreground =
+        Paint()
+          ..color =
+              const Color(
+            0xFF00F0FF,
+          )
+          ..style =
+              PaintingStyle.stroke
+          ..strokeWidth = 9
+          ..strokeCap =
+              StrokeCap.round;
+
+    canvas.drawArc(
+      Rect.fromCircle(
+        center: center,
+        radius: radius,
+      ),
+      pi * .75,
+      pi * 1.5,
+      false,
+      background,
+    );
+
+    canvas.drawArc(
+      Rect.fromCircle(
+        center: center,
+        radius: radius,
+      ),
+      pi * .75,
+      pi *
+          1.5 *
+          progress.clamp(
+            0,
+            1,
+          ),
+      false,
+      foreground,
+    );
+  }
+
+  @override
+  bool shouldRepaint(
+    covariant GaugePainter old,
+  ) {
+    return old.progress !=
+        progress;
+  }
 }
