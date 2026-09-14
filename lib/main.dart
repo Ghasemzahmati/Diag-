@@ -11,8 +11,6 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
-import 'package:permission_handler/permission_handler.dart';
-
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -116,7 +114,10 @@ class _RasaLicenseGatekeeperState extends State<RasaLicenseGatekeeper> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF141926),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: const BorderSide(color: Color(0xFF00F0FF), width: 1.2)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: Color(0xFF00F0FF), width: 1.2),
+        ),
         title: const Row(
           children: [
             Icon(Icons.vpn_key_rounded, color: Color(0xFF00F0FF)),
@@ -134,9 +135,15 @@ class _RasaLicenseGatekeeperState extends State<RasaLicenseGatekeeper> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('انصراف', style: TextStyle(color: Colors.grey))),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('انصراف', style: TextStyle(color: Colors.grey)),
+          ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00F0FF), foregroundColor: Colors.black),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF00F0FF),
+              foregroundColor: Colors.black,
+            ),
             onPressed: () async {
               String input = keyCtrl.text.trim();
               String expected = 'KEY-${(_deviceId.hashCode ^ 0xA5A5).abs().toRadixString(16).toUpperCase()}';
@@ -436,14 +443,21 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     }
   }
 
-  
   Future<void> _showDeviceSelectionDialog() async {
-    // درخواست مجوزهای بلوتوث و موقعیت مکانی برای اندروید ۱۲ به بالا
-    await [
+    // بررسی و درخواست دسترسی‌های ضروری در اندروید ۱۲ به بالا
+    Map<Permission, PermissionStatus> statuses = await [
       Permission.bluetoothConnect,
       Permission.bluetoothScan,
       Permission.location,
     ].request();
+
+    bool isGranted = (statuses[Permission.bluetoothConnect]?.isGranted ?? false) ||
+        (statuses[Permission.location]?.isGranted ?? false);
+
+    if (!isGranted) {
+      _showSnack('دسترسی به بلوتوث تأیید نشد.');
+      return;
+    }
 
     List<BluetoothDevice> devices = [];
     try {
@@ -464,31 +478,42 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('انتخاب اسکنر بلوتوث RASA / OBD-II',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF00F0FF))),
-            const Divider(color: Colors.white12, height: 24),
-            Expanded(
-              child: ListView.builder(
-                itemCount: devices.length,
-                itemBuilder: (context, i) {
-                  final d = devices[i];
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF161B28),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: ListTile(
-                      leading: const Icon(Icons.bluetooth_audio_rounded, color: Color(0xFF00F0FF)),
-                      title: Text(d.name ?? 'دستگاه ناشناس', style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text(d.address, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                      trailing: const Icon(Icons.chevron_left_rounded, color: Colors.grey),
-                      onTap: () => Navigator.pop(ctx, d),
-                    ),
-                  );
-                },
-              ),
+            const Text(
+              'انتخاب اسکنر بلوتوث RASA / OBD-II',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF00F0FF)),
             ),
+            const Divider(color: Colors.white12, height: 24),
+            devices.isEmpty
+                ? const Padding(
+                    padding: EdgeInsets.all(20.0),
+                    child: Text(
+                      'هیچ دستگاه بلوتوثی جفت نشده است.\nابتدا دانگل را در تنظیمات گوشی Pair کنید.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  )
+                : Expanded(
+                    child: ListView.builder(
+                      itemCount: devices.length,
+                      itemBuilder: (context, i) {
+                        final d = devices[i];
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF161B28),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: ListTile(
+                            leading: const Icon(Icons.bluetooth_audio_rounded, color: Color(0xFF00F0FF)),
+                            title: Text(d.name ?? 'دستگاه ناشناس', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            subtitle: Text(d.address, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                            trailing: const Icon(Icons.chevron_left_rounded, color: Colors.grey),
+                            onTap: () => Navigator.pop(ctx, d),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
           ],
         ),
       ),
@@ -496,7 +521,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
 
     if (selected != null) _connectToBluetooth(selected.address);
   }
-  
+
   Future<void> _connectToBluetooth(String address) async {
     setState(() => _isConnecting = true);
     try {
@@ -527,7 +552,8 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
   void _disconnect() {
     _pollingTimer?.cancel();
     _connection?.dispose();
-    _connection = null;
+    
+     _connection = null;
     setState(() {
       _isConnected = false;
       _isConnecting = false;
@@ -550,8 +576,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       if (response.isNotEmpty) _handleElmResponse(response);
     }
   }
-
-  void _handleElmResponse(String resp) {
+   void _handleElmResponse(String resp) {
     setState(() {
       if (_terminalLogs.length > 50) _terminalLogs.removeAt(0);
       _terminalLogs.add(resp.replaceAll('\r', ' '));
@@ -569,7 +594,6 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       if (clean.length >= idx + 4) {
         String pid = clean.substring(idx + 2, idx + 4);
         String payload = clean.substring(idx + 4);
-
         setState(() {
           switch (pid) {
             case '0C':
@@ -578,7 +602,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
                 int b = int.parse(payload.substring(2, 4), radix: 16);
                 _rpm = ((a * 256) + b) ~/ 4;
               }
-             break;
+              break;
             case '0D':
               if (payload.length >= 2) _speed = int.parse(payload.substring(0, 2), radix: 16);
               break;
@@ -591,14 +615,14 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
             case '04':
               if (payload.length >= 2) _engineLoad = (int.parse(payload.substring(0, 2), radix: 16) * 100) ~/ 255;
               break;
-              case '0F':
+            case '0F':
               if (payload.length >= 2) _intakeAirTemp = int.parse(payload.substring(0, 2), radix: 16) - 40;
               break;
           }
         });
       }
     }
-      if (clean.contains('43')) {
+    if (clean.contains('43')) {
       int idx = clean.indexOf('43');
       String dtcBytes = clean.substring(idx + 2);
       List<String> found = [];
@@ -611,7 +635,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
         String code = '$prefix${(b1 & 0x3F).toRadixString(16).padLeft(2, '0')}${b2.toRadixString(16).padLeft(2, '0')}'.toUpperCase();
         found.add(code);
       }
-       setState(() {
+      setState(() {
         _dtcList.clear();
         _dtcList.addAll(found);
         _isLoadingDTC = false;
@@ -622,14 +646,24 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
   void _startLivePolling() {
     _pollingTimer?.cancel();
     int step = 0;
-    _pollingTimer = Timer.periodic(const Duration(milliseconds: 140), (t) {
+   _pollingTimer = Timer.periodic(const Duration(milliseconds: 140), (t) {
       if (!_isConnected) return;
       switch (step % 5) {
-        case 0: _sendRaw('010C\r'); break;
-        case 1: _sendRaw('010D\r'); break;
-        case 2: _sendRaw('0105\r'); break;
-        case 3: _sendRaw('0111\r'); break;
-        case 4: _sendRaw('ATRV\r'); break;
+        case 0:
+          _sendRaw('010C\r');
+          break;
+        case 1:
+          _sendRaw('010D\r');
+          break;
+        case 2:
+          _sendRaw('0105\r');
+          break;
+        case 3:
+          _sendRaw('0111\r');
+          break;
+        case 4:
+          _sendRaw('ATRV\r');
+          break;
       }
       step++;
     });
@@ -656,7 +690,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       _showSnack('شبیه‌ساز فعال شد.');
     }
   }
-  void _showSnack(String msg) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+ void _showSnack(String msg) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
   @override
   void dispose() {
@@ -681,7 +715,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: const Color(0xFF00F0FF), width: 1.2),
               ),
-              child: const Text('RASA', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2, color: Color(0xFF00F0FF), fontSize: 14)),
+             child: const Text('RASA', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2, color: Color(0xFF00F0FF), fontSize: 14)),
             ),
             const SizedBox(width: 8),
             const Text('DIAGNOSTICS', style: TextStyle(fontWeight: FontWeight.w400, fontSize: 13, letterSpacing: 1)),
@@ -704,7 +738,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
             onPressed: _isConnected ? _disconnect : _showDeviceSelectionDialog,
           ),
         ],
-        bottom: TabBar(
+       bottom: TabBar(
           controller: _tabController,
           indicatorColor: const Color(0xFF00F0FF),
           indicatorWeight: 3,
@@ -721,7 +755,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
           ],
         ),
       ),
-      body: TabBarView(
+          body: TabBarView(
         controller: _tabController,
         children: [
           _buildCockpitDashboard(),
@@ -734,7 +768,8 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       ),
     );
   }
-    // ۱. داشبورد حرفه‌ای با گیج‌های نئونی مسابقه‌ای
+
+  // ۱. داشبورد با گیج‌های نئونی
   Widget _buildCockpitDashboard() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -767,7 +802,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
           Row(
             children: [
               Expanded(child: _buildTelemetryCard('دمای آب', '$_coolant °C', Icons.thermostat_rounded, _coolant > 98 ? const Color(0xFFFF2A55) : const Color(0xFFFF9100))),
-              const SizedBox(width: 8),
+             const SizedBox(width: 8),
               Expanded(child: _buildTelemetryCard('دریچه گاز', '$_throttle %', Icons.shutter_speed_rounded, const Color(0xFFD500F9))),
               const SizedBox(width: 8),
               Expanded(child: _buildTelemetryCard('ولتاژ دینام', '${_voltage.toStringAsFixed(1)} V', Icons.bolt_rounded, const Color(0xFFFFD600))),
@@ -798,7 +833,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
                     ],
                   ),
                 ),
-             const SizedBox(width: 12),
+                const SizedBox(width: 12),
                 Text(
                   _isConnected ? 'متصل به خودرو از طریق درگاه RASA OBD-II' : (_isDemoMode ? 'حالت شبیه‌ساز (دمو)' : 'سیستم آماده اتصال به بلوتوث'),
                   style: const TextStyle(fontSize: 13, color: Colors.white70),
@@ -810,7 +845,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       ),
     );
   }
-  Widget _buildTelemetryCard(String title, String val, IconData icon, Color color) {
+ Widget _buildTelemetryCard(String title, String val, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
       decoration: BoxDecoration(
@@ -828,9 +863,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
         ],
       ),
     );
-  }
-
-  // ۲. تب اختصاصی ریموت ابری Rasa
+ }
   Widget _buildRemoteSupportTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -853,7 +886,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
                     Text('بخش مشتری (ارسال درخواست چکاپ)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                   ],
                 ),
-               const SizedBox(height: 8),
+                const SizedBox(height: 8),
                 const Text('با فشردن دکمه زیر، یک کد اتصال تولید شده و خودرو آماده چکاپ ریموت توسط متخصص رسا می‌شود.', style: TextStyle(color: Colors.grey, fontSize: 12)),
                 const SizedBox(height: 14),
                 if (_sessionPin.isNotEmpty && !_isExpertMode)
@@ -868,7 +901,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
                     child: Column(
                       children: [
                         const Text('کد اتصال اختصاصی:', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                        const SizedBox(height: 4),
+                       const SizedBox(height: 4),
                         Text(_sessionPin, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, letterSpacing: 8, color: Color(0xFF00E676))),
                       ],
                     ),
@@ -891,7 +924,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
               ],
             ),
           ),
-                    const SizedBox(height: 16),
+          const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
@@ -908,7 +941,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
                     SizedBox(width: 8),
                     Text('پنل متخصص (کنترل و دیاگ از راه دور)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                   ],
-                ),
+                   ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: _expertPinController,
@@ -930,7 +963,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                  onPressed: _connectAsExpert,
+                    onPressed: _connectAsExpert,
                     icon: const Icon(Icons.sensors_rounded),
                     label: const Text('اتصال به خودرو و دریافت تله‌متری', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
@@ -942,8 +975,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       ),
     );
   }
-
-  // ۳. تب سنسورها
+// ۳. تب سنسورها
   Widget _buildSensorsListTab() {
     final sensors = [
       {'name': 'دور موتور (Engine RPM)', 'val': '$_rpm RPM', 'icon': Icons.speed_rounded},
@@ -954,8 +986,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       {'name': 'دمای هوای ورودی (Intake Temp)', 'val': '$_intakeAirTemp °C', 'icon': Icons.air_rounded},
       {'name': 'ولتاژ باتری و دینام (Voltage)', 'val': '${_voltage.toStringAsFixed(1)} V', 'icon': Icons.bolt_rounded},
     ];
-
-    return ListView.builder(
+   return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: sensors.length,
       itemBuilder: (ctx, i) => Container(
@@ -978,7 +1009,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       ),
     );
   }
-   // ۴. تب خواندن و پاک کردن خطاها
+    // ۴. تب کدهای خطا
   Widget _buildDtcTab() {
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -1021,7 +1052,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
               ),
             ],
           ),
-          const SizedBox(height: 16),
+           const SizedBox(height: 16),
           Expanded(
             child: _isLoadingDTC
                 ? const Center(child: CircularProgressIndicator(color: Color(0xFF00F0FF)))
@@ -1034,7 +1065,10 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
                           return Card(
                             margin: const EdgeInsets.only(bottom: 10),
                             color: const Color(0xFF141926),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: const BorderSide(color: Color(0xFFFF2A55), width: 0.8)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              side: const BorderSide(color: Color(0xFFFF2A55), width: 0.8),
+                            ),
                             child: ListTile(
                               leading: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -1042,7 +1076,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
                                   color: const Color(0xFFFF2A55).withOpacity(0.2),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                               child: Text(code, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                                child: Text(code, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                               ),
                               title: Text(dtcDescriptions[code] ?? 'کد خطای اختصاصی کارخانه', style: const TextStyle(fontSize: 13)),
                             ),
@@ -1054,8 +1088,6 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       ),
     );
   }
-
-  // ۵. تب تست عملگرها
   Widget _buildActuatorsTab() {
     final actuators = [
       {'name': 'فن خنک‌کننده (دور کند)', 'icon': Icons.toys_rounded, 'cmd': '2F0101'},
@@ -1125,7 +1157,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
                   controller: textController,
                   decoration: InputDecoration(
                     hintText: 'ارسال دستور دستی (مثل 010C یا ATZ)',
-                   filled: true,
+                    filled: true,
                     fillColor: const Color(0xFF10141E),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
@@ -1148,9 +1180,8 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     );
   }
 }
-
 // ---------------------------------------------------------------------------
-// ۳. ویجت رسم گیج عقربه‌ای نئونی اختصاصی Rasa
+// ۳. ویجت رسم گیج عقربه‌ای نئونی
 // ---------------------------------------------------------------------------
 class RasaRadialGauge extends StatelessWidget {
   final String label;
@@ -1167,6 +1198,7 @@ class RasaRadialGauge extends StatelessWidget {
     required this.progress,
     required this.glowColor,
   });
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -1222,7 +1254,6 @@ class _GaugePainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2 - 8;
 
-    // پس‌زمینه مسیر قوس
     final bgPaint = Paint()
       ..color = Colors.white10
       ..style = PaintingStyle.stroke
@@ -1237,7 +1268,6 @@ class _GaugePainter extends CustomPainter {
       bgPaint,
     );
 
-    // پیشرفت رنگی نئونی
     final valPaint = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
