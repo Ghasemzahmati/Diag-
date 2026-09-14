@@ -11,6 +11,8 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:permission_handler/permission_handler.dart';
+
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -434,7 +436,15 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     }
   }
 
+  
   Future<void> _showDeviceSelectionDialog() async {
+    // درخواست مجوزهای بلوتوث و موقعیت مکانی برای اندروید ۱۲ به بالا
+    await [
+      Permission.bluetoothConnect,
+      Permission.bluetoothScan,
+      Permission.location,
+    ].request();
+
     List<BluetoothDevice> devices = [];
     try {
       devices = await FlutterBluetoothSerial.instance.getBondedDevices();
@@ -486,7 +496,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
 
     if (selected != null) _connectToBluetooth(selected.address);
   }
-
+  
   Future<void> _connectToBluetooth(String address) async {
     setState(() => _isConnecting = true);
     try {
