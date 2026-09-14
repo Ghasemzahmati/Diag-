@@ -289,7 +289,7 @@ class _RasaLicenseGatekeeperState extends State<RasaLicenseGatekeeper> {
 }
 
 // ---------------------------------------------------------------------------
-// ۲. داشبورد اصلی RASA با پایش پارامترها و سنسورها
+// ۲. داشبورد اصلی RASA
 // ---------------------------------------------------------------------------
 final Map<String, String> dtcDescriptions = {
   'P0100': 'ایراد در سنسور جریان جرم هوا (MAF)',
@@ -325,6 +325,8 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
   bool _isDemoMode = false;
 
   String? _activeActuatorName;
+  bool _isQueueProcessing = false;
+  Completer<String>? _cmdCompleter;
 
   Timer? _pollingTimer;
   Timer? _demoTimer;
@@ -543,23 +545,19 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
 
       connection.input!.listen(_onDataReceived).onDone(_disconnect);
 
-      // مقداردهی اولیه بهینه برای خودروهای ایرانی و چینی
       await Future.delayed(const Duration(milliseconds: 300));
-      _sendRaw('ATZ\r');
+      await _sendSyncCommand('ATZ');
       await Future.delayed(const Duration(milliseconds: 300));
-      _sendRaw('ATE0\r');
-      await Future.delayed(const Duration(milliseconds: 200));
-      _sendRaw('ATH0\r');
-      await Future.delayed(const Duration(milliseconds: 200));
-      _sendRaw('ATAT1\r'); // Adaptive Timing
-      await Future.delayed(const Duration(milliseconds: 200));
-      _sendRaw('ATSP0\r'); // تشخیص اتوماتیک پروتکل (CAN یا K-Line)
+      await _sendSyncCommand('ATE0');
+      await _sendSyncCommand('ATH0');
+      await _sendSyncCommand('ATAT1');
+      await _sendSyncCommand('ATSP0');
 
       _startLivePolling();
-      _showSnack('متصل به درگاه عیب‌یابی خودرو.');
+      _showSnack('اتصال بلوتوث به پورت خودرو با موفقیت برقرار شد.');
     } catch (e) {
       setState(() => _isConnecting = false);
-      _showSnack('خطا در اتصال: $e');
+      _showSnack('خطا در اتصال بلوتوث: $e');
     }
   }
 
@@ -570,6 +568,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     setState(() {
       _isConnected = false;
       _isConnecting = false;
+      _activeActuatorName = null;
     });
   }
 
@@ -580,13 +579,41 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     }
   }
 
+  // متد ارسال همگام همراه با صف جهت جلوگیری از سرریز بافر دانگل
+  Future<String> _sendSyncCommand(String cmd) async {
+    if (!_isConnected || _connection == null) return '';
+    while (_isQueueProcessing) {
+      await Future.delayed(const Duration(milliseconds: 10));
+    }
+    _isQueueProcessing = true;
+    _cmdCompleter = Completer<String>();
+
+    _sendRaw('$cmd\r');
+
+    String result = '';
+    try {
+      result = await _cmdCompleter!.future.timeout(const Duration(milliseconds: 400));
+    } catch (_) {
+      result = '';
+    } finally {
+      _isQueueProcessing = false;
+      _cmdCompleter = null;
+    }
+    return result;
+  }
+
   void _onDataReceived(Uint8List data) {
     _serialBuffer += utf8.decode(data, allowMalformed: true);
     while (_serialBuffer.contains('>')) {
       int promptIdx = _serialBuffer.indexOf('>');
       String response = _serialBuffer.substring(0, promptIdx).trim();
       _serialBuffer = _serialBuffer.substring(promptIdx + 1);
-      if (response.isNotEmpty) _handleElmResponse(response);
+      if (response.isNotEmpty) {
+        if (_cmdCompleter != null && !_cmdCompleter!.isCompleted) {
+          _cmdCompleter!.complete(response);
+        }
+        _handleElmResponse(response);
+      }
     }
   }
 
@@ -623,16 +650,16 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
             case '0D': // سرعت خودرو
               if (payload.length >= 2) _speed = int.parse(payload.substring(0, 2), radix: 16);
               break;
-            case '05': // دمای آب خنک‌کننده
+            case '05': // دمای آب موتور
               if (payload.length >= 2) _coolant = int.parse(payload.substring(0, 2), radix: 16) - 40;
               break;
-            case '11': // زاویه دریچه گاز
+            case '11': // دریچه گاز
               if (payload.length >= 2) _throttle = (int.parse(payload.substring(0, 2), radix: 16) * 100) ~/ 255;
               break;
             case '04': // بار موتور
               if (payload.length >= 2) _engineLoad = (int.parse(payload.substring(0, 2), radix: 16) * 100) ~/ 255;
               break;
-            case '0F': // دمای هوای منیفولد
+            case '0F': // دمای هوای ورودی
               if (payload.length >= 2) _intakeAirTemp = int.parse(payload.substring(0, 2), radix: 16) - 40;
               break;
             case '14': // سنسور اکسیژن بالا (0 الی 1.275V)
@@ -641,7 +668,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
                 _o2SensorVoltage = a / 200.0;
               }
               break;
-            case 'A6': // کارکرد استاندارد جهانی OBD-II
+            case 'A6': // کیلومتر استاندارد OBD-II
               if (payload.length >= 8) {
                 int a = int.parse(payload.substring(0, 2), radix: 16);
                 int b = int.parse(payload.substring(2, 4), radix: 16);
@@ -656,7 +683,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       }
     }
 
-    // ۳. پارس کردن کیلومتر خودروهای ایرانی و چینی (UDS / KWP - Service 21 & 22)
+    // ۳. پارس کردن کیلومتر خودروهای ایرانی و چینی
     final List<String> odoHeaders = ['6101', '62F190', '620202', '622002', '620101'];
     for (String hdr in odoHeaders) {
       if (clean.contains(hdr)) {
@@ -675,7 +702,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       }
     }
 
-    // ۴. پارس کردن کدهای خطای ایسیو (Mode 03)
+    // ۴. پارس کردن کدهای خطای ایسیو
     if (clean.contains('43')) {
       int idx = clean.indexOf('43');
       String dtcBytes = clean.substring(idx + 2);
@@ -701,42 +728,41 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     if (_activeActuatorName != null) return;
     _pollingTimer?.cancel();
     int step = 0;
-    _pollingTimer = Timer.periodic(const Duration(milliseconds: 130), (t) {
-      if (!_isConnected || _activeActuatorName != null) return;
+    _pollingTimer = Timer.periodic(const Duration(milliseconds: 140), (t) async {
+      if (!_isConnected || _activeActuatorName != null || _isQueueProcessing) return;
       switch (step % 9) {
         case 0:
-          _sendRaw('010C\r'); // RPM
+          await _sendSyncCommand('010C');
           break;
         case 1:
-          _sendRaw('010D\r'); // Speed
+          await _sendSyncCommand('010D');
           break;
         case 2:
-          _sendRaw('0105\r'); // Coolant
+          await _sendSyncCommand('0105');
           break;
         case 3:
-          _sendRaw('0111\r'); // Throttle
+          await _sendSyncCommand('0111');
           break;
         case 4:
-          _sendRaw('0114\r'); // Oxygen Sensor
+          await _sendSyncCommand('0114');
           break;
         case 5:
-          _sendRaw('ATRV\r'); // Battery Voltage
+          await _sendSyncCommand('ATRV');
           break;
         case 6:
-          if (_odometer == 0) _sendRaw('01A6\r'); // Standard OBD ODO
+          if (_odometer == 0) await _sendSyncCommand('01A6');
           break;
         case 7:
-          if (_odometer == 0) _sendRaw('2101\r'); // Iranian KWP ODO
+          if (_odometer == 0) await _sendSyncCommand('2101');
           break;
         case 8:
-          if (_odometer == 0) _sendRaw('22F190\r'); // Chinese UDS CAN ODO
+          if (_odometer == 0) await _sendSyncCommand('22F190');
           break;
       }
       step++;
     });
   }
 
-  // متد جامع تست عملگرها سازگار با هر دو شبکه CAN و K-Line
   Future<void> _executeSmartActuatorTest(List<String> candidates, String name) async {
     if (!_isConnected && !_isDemoMode) {
       _showSnack('ابتدا دانگل بلوتوث را متصل کنید.');
@@ -756,32 +782,24 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     _showSnack('در حال ارسال دستور تست به ایسیو: $name');
 
     try {
-      // ۱. ارسال هدر استاندارد ایسیو موتور (سازگار با خودروهای چینی و ایرانی شبکه CAN)
-      _sendRaw('ATSH 7E0\r');
+      await _sendSyncCommand('ATSH 7E0');
       await Future.delayed(const Duration(milliseconds: 80));
 
-      // ۲. تلاش برای ورود به سشن‌های عیب‌یابی (UDS / KWP / ISO)
-      _sendRaw('1003\r'); // Extended UDS Session (چینی‌ها و بوش)
+      await _sendSyncCommand('1003');
+      await _sendSyncCommand('10C0');
+      await _sendSyncCommand('1081');
       await Future.delayed(const Duration(milliseconds: 100));
-      _sendRaw('10C0\r'); // Siemens KWP Session (ایرانی‌ها)
-      await Future.delayed(const Duration(milliseconds: 100));
-      _sendRaw('1081\r'); // Sagem / Valeo
-      await Future.delayed(const Duration(milliseconds: 120));
 
-      // ۳. ارسال پکت‌های دستوری کاندید برای کنترل قطعه
       for (String cmd in candidates) {
-        _sendRaw('$cmd\r');
-        await Future.delayed(const Duration(milliseconds: 220));
+        await _sendSyncCommand(cmd);
+        await Future.delayed(const Duration(milliseconds: 150));
       }
 
-      // ۴. زنده نگه‌داشتن سشن (Tester Present)
-      _sendRaw('3E00\r');
-      await Future.delayed(const Duration(milliseconds: 1000));
+      await _sendSyncCommand('3E00');
+      await Future.delayed(const Duration(milliseconds: 800));
 
-      // ۵. بستن سشن و بازگردانی هدر عمومی
-      _sendRaw('1001\r');
-      await Future.delayed(const Duration(milliseconds: 80));
-      _sendRaw('ATSH 7DF\r');
+      await _sendSyncCommand('1001');
+      await _sendSyncCommand('ATSH 7DF');
 
       _showSnack('دستور تست عملگر $name به خودرو ارسال گردید.');
     } catch (e) {
@@ -1278,7 +1296,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     );
   }
 
-  // ۵. تب عملگرها با پوشش جامع دستورات چینی و ایرانی
+  // ۵. تب عملگرها با تفکیک مستقل دکمه‌ها
   Widget _buildActuatorsTab() {
     final actuators = [
       {
