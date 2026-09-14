@@ -1,286 +1,332 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
-import 'dart:math';
 import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:http/http.dart' as http;
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-  ));
-  runApp(const RasaApp());
+  runApp(const RasaDiagApp());
 }
 
-class RasaApp extends StatelessWidget {
-  const RasaApp({super.key});
+class RasaDiagApp extends StatelessWidget {
+  const RasaDiagApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Rasa Diag',
-      theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF080B10),
-        cardColor: const Color(0xFF10141E),
-        primaryColor: const Color(0xFF00F0FF),
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF00F0FF),
-          secondary: Color(0xFF00E676),
-          error: Color(0xFFFF2A55),
-          surface: Color(0xFF10141E),
-        ),
+      title: 'RASA DIAG',
+      theme: ThemeData(
+        useMaterial3: true,
+        fontFamily: 'Vazirmatn',
+        colorSchemeSeed: Colors.deepPurple,
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF0B0B10),
       ),
-      home: const RasaLicenseGatekeeper(),
+      home: const LicenseGate(),
     );
   }
 }
 
-// ---------------------------------------------------------------------------
-// ۱. صفحه لایسنس
-// ---------------------------------------------------------------------------
-class RasaLicenseGatekeeper extends StatefulWidget {
-  const RasaLicenseGatekeeper({super.key});
+/* ============================================================
+   ECU PROFILE
+   ============================================================ */
 
-  @override
-  State<RasaLicenseGatekeeper> createState() => _RasaLicenseGatekeeperState();
+class EcuProfile {
+  final String manufacturer;
+  final String model;
+  final String family;
+  final String protocol;
+  final String protocolCommand;
+  final String header;
+  final String functionalHeader;
+
+  const EcuProfile({
+    required this.manufacturer,
+    required this.model,
+    required this.family,
+    required this.protocol,
+    required this.protocolCommand,
+    required this.header,
+    required this.functionalHeader,
+  });
+
+  String get displayName => '$manufacturer - $model';
 }
 
-class _RasaLicenseGatekeeperState extends State<RasaLicenseGatekeeper> {
-  String _deviceId = 'در حال استخراج شناسه...';
-  bool _isChecking = true;
-  bool _isActivated = false;
+/* ============================================================
+   VEHICLE / ECU DATABASE
+   ============================================================ */
 
-  final String _licenseApiUrl = 'https://api.jsonbin.io/v3/b/EXAMPLE_LICENSE_ENDPOINT';
+const List<EcuProfile> ecuProfiles = [
+  EcuProfile(
+    manufacturer: 'ایران خودرو / سایپا',
+    model: 'Siemens / SSAT',
+    family: 'KWP',
+    protocol: 'ISO 14230 KWP Fast Init',
+    protocolCommand: 'ATSP5',
+    header: '8111F1',
+    functionalHeader: '81',
+  ),
+
+  EcuProfile(
+    manufacturer: 'ایران خودرو',
+    model: 'Sagem / Valeo S2000 / PL4',
+    family: 'KWP',
+    protocol: 'ISO 14230 KWP 5-Baud',
+    protocolCommand: 'ATSP4',
+    header: '8111F1',
+    functionalHeader: '81',
+  ),
+
+  EcuProfile(
+    manufacturer: 'پژو 206 / رانا',
+    model: 'Bosch ME7.4.4 / ME7.4.9',
+    family: 'KWP',
+    protocol: 'ISO 14230 KWP',
+    protocolCommand: 'ATSP5',
+    header: '8111F1',
+    functionalHeader: '81',
+  ),
+
+  EcuProfile(
+    manufacturer: 'ایران خودرو',
+    model: 'Bosch ME17 / Easy-U',
+    family: 'UDS',
+    protocol: 'ISO 15765-4 CAN 11bit 500k',
+    protocolCommand: 'ATSP6',
+    header: '7E0',
+    functionalHeader: '7DF',
+  ),
+
+  EcuProfile(
+    manufacturer: 'MVM / Chery / Phenix',
+    model: 'UDS CAN',
+    family: 'UDS',
+    protocol: 'ISO 15765-4 CAN 11bit 500k',
+    protocolCommand: 'ATSP6',
+    header: '7E0',
+    functionalHeader: '7DF',
+  ),
+
+  EcuProfile(
+    manufacturer: 'کرمان موتور',
+    model: 'JAC / KMC Bosch / Delphi',
+    family: 'UDS',
+    protocol: 'ISO 15765-4 CAN 11bit 500k',
+    protocolCommand: 'ATSP6',
+    header: '7E0',
+    functionalHeader: '7DF',
+  ),
+
+  EcuProfile(
+    manufacturer: 'بهمن / هایما / برلیانس / چانگان',
+    model: 'CAN 500k',
+    family: 'UDS',
+    protocol: 'ISO 15765-4 CAN 11bit 500k',
+    protocolCommand: 'ATSP6',
+    header: '7E0',
+    functionalHeader: '7DF',
+  ),
+
+  EcuProfile(
+    manufacturer: 'عمومی',
+    model: 'OBD-II',
+    family: 'OBD',
+    protocol: 'Automatic',
+    protocolCommand: 'ATSP0',
+    header: '7DF',
+    functionalHeader: '7DF',
+  ),
+];
+
+/* ============================================================
+   DTC DATABASE
+   ============================================================ */
+
+const Map<String, String> dtcDescriptions = {
+  'P0100': 'مدار سنسور MAF / جریان هوا',
+  'P0105': 'مدار سنسور MAP',
+  'P0110': 'مدار سنسور دمای هوای ورودی IAT',
+  'P0115': 'مدار سنسور دمای مایع خنک‌کننده ECT',
+  'P0120': 'مدار سنسور موقعیت دریچه گاز TPS',
+  'P0130': 'مدار سنسور اکسیژن Bank 1 Sensor 1',
+  'P0136': 'مدار سنسور اکسیژن Bank 1 Sensor 2',
+  'P0200': 'خطای مدار انژکتورها',
+  'P0300': 'احتراق ناقص تصادفی / چند سیلندر',
+  'P0335': 'مدار سنسور موقعیت میل‌لنگ CKP',
+  'P0340': 'مدار سنسور موقعیت میل‌سوپاپ CMP',
+  'P0420': 'بازده پایین کاتالیست',
+  'P0443': 'مدار شیر purge سیستم EVAP',
+  'P0500': 'خطای سنسور سرعت خودرو',
+  'P0560': 'ولتاژ سیستم خودرو',
+  'P0606': 'خطای پردازنده ECU',
+};
+
+/* ============================================================
+   DIAGNOSTIC DATA
+   ============================================================ */
+
+class LiveData {
+  double? rpm;
+  double? speed;
+  double? coolant;
+  double? throttle;
+  double? engineLoad;
+  double? intakeAir;
+  double? oxygen;
+  double? battery;
+
+  LiveData copy() {
+    return LiveData()
+      ..rpm = rpm
+      ..speed = speed
+      ..coolant = coolant
+      ..throttle = throttle
+      ..engineLoad = engineLoad
+      ..intakeAir = intakeAir
+      ..oxygen = oxygen
+      ..battery = battery;
+  }
+}
+
+class DtcItem {
+  final String code;
+  final String description;
+
+  const DtcItem({
+    required this.code,
+    required this.description,
+  });
+}
+
+/* ============================================================
+   LICENSE GATE
+   ============================================================ */
+
+class LicenseGate extends StatefulWidget {
+  const LicenseGate({super.key});
+
+  @override
+  State<LicenseGate> createState() => _LicenseGateState();
+}
+
+class _LicenseGateState extends State<LicenseGate> {
+  final TextEditingController _controller = TextEditingController();
+
+  bool _checking = true;
+  bool _licensed = false;
 
   @override
   void initState() {
     super.initState();
-    _checkLicense();
+    _loadLicense();
   }
 
-  Future<void> _checkLicense() async {
-    setState(() => _isChecking = true);
-    final deviceInfo = DeviceInfoPlugin();
-    String rawId = '';
-    try {
-      if (Platform.isAndroid) {
-        final info = await deviceInfo.androidInfo;
-        rawId = '${info.manufacturer}-${info.model}-${info.id}'.toUpperCase();
-      } else {
-        rawId = 'RASA-${Random().nextInt(999999)}';
-      }
-    } catch (_) {
-      rawId = 'RASA-${Random().nextInt(999999)}';
-    }
-
-    String cleanId = 'RASA-${rawId.hashCode.abs().toRadixString(16).toUpperCase()}';
+  Future<void> _loadLicense() async {
     final prefs = await SharedPreferences.getInstance();
-    bool localActive = prefs.getBool('license_$cleanId') ?? false;
 
-    try {
-      final res = await http.get(Uri.parse('$_licenseApiUrl?device_id=$cleanId')).timeout(const Duration(seconds: 3));
-      if (res.statusCode == 200) {
-        final json = jsonDecode(res.body);
-        if (json['status'] == 'ACTIVE' || json[cleanId] == 'ACTIVE') {
-          localActive = true;
-          await prefs.setBool('license_$cleanId', true);
-        } else if (json['status'] == 'LOCKED' || json[cleanId] == 'LOCKED') {
-          localActive = false;
-          await prefs.setBool('license_$cleanId', false);
-        }
-      }
-    } catch (_) {}
+    final active = prefs.getBool('license_active') ?? false;
+
+    if (!mounted) return;
 
     setState(() {
-      _deviceId = cleanId;
-      _isActivated = localActive;
-      _isChecking = false;
+      _licensed = active;
+      _checking = false;
     });
   }
 
-  void _showActivationDialog() {
-    final keyCtrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF141926),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: Color(0xFF00F0FF), width: 1.2),
-        ),
-        title: const Row(
-          children: [
-            Icon(Icons.vpn_key_rounded, color: Color(0xFF00F0FF)),
-            SizedBox(width: 8),
-            Text('فعال‌سازی نرم‌افزار رسا', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: TextField(
-          controller: keyCtrl,
-          decoration: InputDecoration(
-            hintText: 'کد لایسنس را وارد کنید',
-            filled: true,
-            fillColor: Colors.black45,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('انصراف', style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF00F0FF),
-              foregroundColor: Colors.black,
-            ),
-            onPressed: () async {
-              String input = keyCtrl.text.trim();
-              String expected = 'KEY-${(_deviceId.hashCode ^ 0xA5A5).abs().toRadixString(16).toUpperCase()}';
-              if (input == expected || input == 'MASTER-PASS-2026') {
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.setBool('license_$_deviceId', true);
-                setState(() => _isActivated = true);
-                if (mounted) Navigator.pop(ctx);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('کد لایسنس نامعتبر است.')));
-              }
-            },
-            child: const Text('فعال‌سازی'),
-          )
-        ],
-      ),
+  Future<void> _activate() async {
+    final key = _controller.text.trim();
+
+    if (key.length < 8) {
+      _showMessage('کد فعال‌سازی معتبر نیست');
+      return;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('license_active', true);
+
+    if (!mounted) return;
+
+    setState(() {
+      _licensed = true;
+    });
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isChecking) {
+    if (_checking) {
       return const Scaffold(
         body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(color: Color(0xFF00F0FF)),
-              SizedBox(height: 16),
-              Text('R A S A   A U T O M O T I V E', style: TextStyle(letterSpacing: 4, color: Colors.white70)),
-            ],
-          ),
+          child: CircularProgressIndicator(),
         ),
       );
     }
 
-    if (_isActivated) return const RasaDashboardScreen();
+    if (_licensed) {
+      return const DiagnosticHome();
+    }
 
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment(0, -0.4),
-            radius: 1.2,
-            colors: [Color(0xFF151C2C), Color(0xFF06080D)],
-          ),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF10141E),
-                  border: Border.all(color: const Color(0xFFFF2A55), width: 2),
-                  boxShadow: [
-                    BoxShadow(color: const Color(0xFFFF2A55).withOpacity(0.3), blurRadius: 30, spreadRadius: 4),
-                  ],
-                ),
-                child: const Icon(Icons.lock_rounded, size: 48, color: Color(0xFFFF2A55)),
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'R A S A',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: 8, color: Color(0xFF00F0FF)),
-              ),
-              const SizedBox(height: 6),
-              const Text('سامانه دیاگ و تله‌متری جامع خودروهای ایرانی و چینی', style: TextStyle(color: Colors.grey, fontSize: 13)),
-              const SizedBox(height: 32),
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10141E).withOpacity(0.8),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.white10),
-                ),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
                 child: Column(
                   children: [
-                    const Text('شناسه اختصاصی دستگاه شما (Machine ID):', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                    const SizedBox(height: 10),
-                    SelectableText(
-                      _deviceId,
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF00F0FF), letterSpacing: 3),
+                    const Icon(
+                      Icons.car_repair,
+                      size: 80,
                     ),
-                    const SizedBox(height: 12),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white10,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'RASA DIAG',
+                      style: TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.bold,
                       ),
-                      onPressed: () {
-                        Clipboard.setData(ClipboardData(text: _deviceId));
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('شناسه کپی شد.')));
-                      },
-                      icon: const Icon(Icons.copy_rounded, size: 16),
-                      label: const Text('کپی شناسه جهت ارسال به پشتیبانی'),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Professional Automotive Diagnostic',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 30),
+                    TextField(
+                      controller: _controller,
+                      decoration: const InputDecoration(
+                        labelText: 'کد فعال‌سازی',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: _activate,
+                        icon: const Icon(Icons.key),
+                        label: const Text('فعال‌سازی'),
+                      ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 28),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        side: const BorderSide(color: Color(0xFF00F0FF)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
-                      onPressed: _checkLicense,
-                      icon: const Icon(Icons.refresh_rounded, color: Color(0xFF00F0FF)),
-                      label: const Text('بررسی مجدد', style: TextStyle(color: Color(0xFF00F0FF))),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF00F0FF),
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      ),
-                      onPressed: _showActivationDialog,
-                      icon: const Icon(Icons.key_rounded),
-                      label: const Text('ورود لایسنس', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                ],
-              )
-            ],
+            ),
           ),
         ),
       ),
@@ -288,1394 +334,1442 @@ class _RasaLicenseGatekeeperState extends State<RasaLicenseGatekeeper> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// ۲. مدل داده‌های خودرو و ایسیو
-// ---------------------------------------------------------------------------
-class CarEcuProfile {
-  final String title;
-  final String category;
-  final String protocolCmd; // مثل ATSP5 یا ATSP6
-  final String? headerCmd;   // مثل ATSH 7E0 یا ATSH 8111F1
-  final String odoMode;      // دستور خواندن کیلومتر
+/* ============================================================
+   MAIN DIAGNOSTIC HOME
+   ============================================================ */
 
-  const CarEcuProfile({
-    required this.title,
-    required this.category,
-    required this.protocolCmd,
-    this.headerCmd,
-    required this.odoMode,
-  });
-}
-
-final List<CarEcuProfile> carProfiles = [
-  const CarEcuProfile(
-    title: 'ایران خودرو / سایپا (Siemens & SSAT KWP)',
-    category: 'ایران خودرو / سایپا',
-    protocolCmd: 'ATSP5',
-    headerCmd: 'ATSH 8111F1',
-    odoMode: '2101',
-  ),
-  const CarEcuProfile(
-    title: 'ایران خودرو (Sagem / Valeo S2000 & PL4)',
-    category: 'ایران خودرو',
-    protocolCmd: 'ATSP4',
-    headerCmd: 'ATSH 8111F1',
-    odoMode: '2101',
-  ),
-  const CarEcuProfile(
-    title: 'پژو ۲۰۶ و رانا (Bosch ME7.4.4 / ME7.4.9)',
-    category: 'ایران خودرو',
-    protocolCmd: 'ATSP5',
-    headerCmd: 'ATSH 8111F1',
-    odoMode: '2101',
-  ),
-  const CarEcuProfile(
-    title: 'پژو، دنا و سمند توربو (Bosch ME17 / Easy-U CAN)',
-    category: 'ایران خودرو',
-    protocolCmd: 'ATSP6',
-    headerCmd: 'ATSH 7E0',
-    odoMode: '01A6',
-  ),
-  const CarEcuProfile(
-    title: 'مدیران خودرو / ام‌وی‌ام / فونیکس (Chery & MVM UDS CAN)',
-    category: 'چینی',
-    protocolCmd: 'ATSP6',
-    headerCmd: 'ATSH 7E0',
-    odoMode: '22F190',
-  ),
-  const CarEcuProfile(
-    title: 'کرمان موتور (JAC / KMC Bosch & Delphi CAN)',
-    category: 'چینی',
-    protocolCmd: 'ATSP6',
-    headerCmd: 'ATSH 7E0',
-    odoMode: '220202',
-  ),
-  const CarEcuProfile(
-    title: 'بهمن موتور / هایما / برلیانس / چانگان (CAN 500k)',
-    category: 'چینی',
-    protocolCmd: 'ATSP6',
-    headerCmd: 'ATSH 7E0',
-    odoMode: '01A6',
-  ),
-  const CarEcuProfile(
-    title: 'سایر خودروها و استاندارد عمومی (OBD-II Generic)',
-    category: 'عمومی',
-    protocolCmd: 'ATSP0',
-    headerCmd: 'ATSH 7DF',
-    odoMode: '01A6',
-  ),
-];
-
-// ---------------------------------------------------------------------------
-// ۳. داشبورد اصلی RASA با انتخاب نوع ایسیو
-// ---------------------------------------------------------------------------
-final Map<String, String> dtcDescriptions = {
-  'P0100': 'ایراد در سنسور جریان جرم هوا (MAF)',
-  'P0105': 'ایراد مدار سنسور فشار منیفولد (MAP)',
-  'P0110': 'ایراد مدار سنسور دمای هوای ورودی (IAT)',
-  'P0115': 'ایراد مدار سنسور دمای آب خنک‌کننده (ECT)',
-  'P0120': 'ایراد در مدار موقعیت دریچه گاز (TPS)',
-  'P0130': 'ایراد در سنسور اکسیژن بالا (سنسور ۱)',
-  'P0136': 'ایراد در سنسور اکسیژن پایین (سنسور ۲)',
-  'P0200': 'ایراد در مدار پاشش انژکتورها',
-  'P0300': 'احتراق ناقص تصادفی در سیلندرها (Misfire)',
-  'P0335': 'ایراد در سنسور موقعیت میل‌لنگ (دور موتور)',
-  'P0340': 'ایراد در سنسور موقعیت میل‌سوپاپ',
-  'P0420': 'کاهش راندمان کاتالیست اگزوز',
-  'P0443': 'ایراد در شیر برقی تخلیه کنیستر (EVAP)',
-  'P0500': 'ایراد در سنسور سرعت خودرو (VSS)',
-  'P0560': 'ایراد در ولتاژ سیستم برق و دینام',
-  'P0606': 'ایراد در پردازنده مرکزی ایسیو (ECU)',
-};
-
-class RasaDashboardScreen extends StatefulWidget {
-  const RasaDashboardScreen({super.key});
+class DiagnosticHome extends StatefulWidget {
+  const DiagnosticHome({super.key});
 
   @override
-  State<RasaDashboardScreen> createState() => _RasaDashboardScreenState();
+  State<DiagnosticHome> createState() => _DiagnosticHomeState();
 }
 
-class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTickerProviderStateMixin {
+class _DiagnosticHomeState extends State<DiagnosticHome>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  BluetoothConnection? _connection;
-  bool _isConnected = false;
-  bool _isConnecting = false;
-  bool _isDemoMode = false;
 
-  CarEcuProfile _selectedProfile = carProfiles[0];
-  String? _activeActuatorName;
+  BluetoothConnection? _connection;
+  StreamSubscription<Uint8List>? _inputSubscription;
+
+  final StringBuffer _rxBuffer = StringBuffer();
+
+  bool _connecting = false;
+  bool _connected = false;
+  bool _demoMode = false;
   bool _isBusy = false;
 
-  Timer? _pollingTimer;
-  Timer? _demoTimer;
-  String _serialBuffer = '';
+  String _adapterInfo = 'متصل نیست';
+  String _protocolInfo = '-';
 
-  int _rpm = 0;
-  int _speed = 0;
-  int _coolant = 0;
-  double _voltage = 0.0;
-  int _throttle = 0;
-  int _engineLoad = 0;
-  int _intakeAirTemp = 0;
-  int _odometer = 0;
-  double _o2SensorVoltage = 0.0;
+  EcuProfile? _selectedProfile;
 
-  final List<String> _dtcList = [];
-  bool _isLoadingDTC = false;
-  final List<String> _terminalLogs = [];
+  String _ecuModel = 'شناسایی نشده';
+  String _ecuSoftware = 'نامشخص';
+  String _vin = 'نامشخص';
 
-  WebSocketChannel? _wsChannel;
-  bool _isCloudConnected = false;
-  bool _isExpertMode = false;
-  String _sessionPin = '';
-  final TextEditingController _expertPinController = TextEditingController();
+  LiveData _liveData = LiveData();
+
+  final List<DtcItem> _dtcs = [];
+
+  Timer? _liveTimer;
+
+  final TextEditingController _terminalController =
+      TextEditingController();
+
+  final List<String> _terminalLog = [];
+
+  final Map<String, Completer<String>> _waiters = {};
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 6, vsync: this);
-  }
 
-  void _startClientSession() {
-    final random = Random();
-    final pin = (100000 + random.nextInt(900000)).toString();
-    setState(() {
-      _sessionPin = pin;
-      _isExpertMode = false;
-    });
-    _connectToCloudServer(pin);
-  }
-
-  void _connectAsExpert() {
-    final pin = _expertPinController.text.trim();
-    if (pin.length != 6) {
-      _showSnack('کد اتصال باید ۶ رقمی باشد.');
-      return;
-    }
-    setState(() {
-      _sessionPin = pin;
-      _isExpertMode = true;
-    });
-    _connectToCloudServer(pin);
-  }
-
-  void _connectToCloudServer(String pin) {
-    try {
-      final uri = Uri.parse('wss://ws.postman-echo.com/raw');
-      _wsChannel = WebSocketChannel.connect(uri);
-      setState(() => _isCloudConnected = true);
-      _showSnack('اتصال ریموت برقرار شد.');
-
-      _wsChannel!.stream.listen((message) {
-        try {
-          final data = jsonDecode(message.toString());
-          if (data['pin'] == _sessionPin) {
-            if (_isExpertMode) {
-              if (data['type'] == 'telemetry') {
-                setState(() {
-                  _rpm = data['rpm'] ?? _rpm;
-                  _speed = data['speed'] ?? _speed;
-                  _coolant = data['coolant'] ?? _coolant;
-                  _voltage = (data['voltage'] as num?)?.toDouble() ?? _voltage;
-                  _throttle = data['throttle'] ?? _throttle;
-                  _odometer = data['odometer'] ?? _odometer;
-                  _o2SensorVoltage = (data['o2'] as num?)?.toDouble() ?? _o2SensorVoltage;
-                });
-              } else if (data['type'] == 'dtc_response') {
-                setState(() {
-                  _dtcList.clear();
-                  _dtcList.addAll(List<String>.from(data['dtcs'] ?? []));
-                  _isLoadingDTC = false;
-                });
-              }
-            } else {
-              if (data['type'] == 'command') {
-                _sendRaw('${data['cmd']}\r');
-              }
-            }
-          }
-        } catch (_) {}
-      }, onDone: () => setState(() => _isCloudConnected = false));
-
-      if (!_isExpertMode) {
-        Timer.periodic(const Duration(milliseconds: 300), (timer) {
-          if (!_isCloudConnected || _isExpertMode) {
-            timer.cancel();
-            return;
-          }
-          final packet = jsonEncode({
-            'pin': _sessionPin,
-            'type': 'telemetry',
-            'rpm': _rpm,
-            'speed': _speed,
-            'coolant': _coolant,
-            'voltage': _voltage,
-            'throttle': _throttle,
-            'odometer': _odometer,
-            'o2': _o2SensorVoltage,
-          });
-          _wsChannel?.sink.add(packet);
-        });
-      }
-    } catch (e) {
-      _showSnack('خطا در اتصال: $e');
-    }
-  }
-
-  void _sendRemoteCommand(String cmd) {
-    if (_isCloudConnected && _isExpertMode) {
-      final packet = jsonEncode({'pin': _sessionPin, 'type': 'command', 'cmd': cmd});
-      _wsChannel?.sink.add(packet);
-      _showSnack('دستور ارسال شد.');
-    } else {
-      _sendRaw('$cmd\r');
-    }
-  }
-
-  Future<void> _showDeviceSelectionDialog() async {
-    Map<Permission, PermissionStatus> statuses = await [
-      Permission.bluetoothConnect,
-      Permission.bluetoothScan,
-      Permission.location,
-    ].request();
-
-    bool isGranted = (statuses[Permission.bluetoothConnect]?.isGranted ?? false) ||
-        (statuses[Permission.location]?.isGranted ?? false);
-
-    if (!isGranted) {
-      _showSnack('دسترسی به بلوتوث تأیید نشد.');
-      return;
-    }
-
-    List<BluetoothDevice> devices = [];
-    try {
-      devices = await FlutterBluetoothSerial.instance.getBondedDevices();
-    } catch (e) {
-      _showSnack('خطا در بلوتوث: $e');
-      return;
-    }
-
-    if (!mounted) return;
-
-    BluetoothDevice? selected = await showModalBottomSheet<BluetoothDevice>(
-      context: context,
-      backgroundColor: const Color(0xFF10141E),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            const Text(
-              'انتخاب اسکنر بلوتوث RASA / OBD-II',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF00F0FF)),
-            ),
-            const Divider(color: Colors.white12, height: 24),
-            devices.isEmpty
-                ? const Padding(
-                    padding: EdgeInsets.all(20.0),
-                    child: Text(
-                      'هیچ دستگاه بلوتوثی جفت نشده است.\nابتدا دانگل را در تنظیمات گوشی Pair کنید.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  )
-                : Expanded(
-                    child: ListView.builder(
-                      itemCount: devices.length,
-                      itemBuilder: (context, i) {
-                        final d = devices[i];
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF161B28),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: ListTile(
-                            leading: const Icon(Icons.bluetooth_audio_rounded, color: Color(0xFF00F0FF)),
-                            title: Text(d.name ?? 'دستگاه ناشناس', style: const TextStyle(fontWeight: FontWeight.bold)),
-                            subtitle: Text(d.address, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                            trailing: const Icon(Icons.chevron_left_rounded, color: Colors.grey),
-                            onTap: () => Navigator.pop(ctx, d),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-          ],
-        ),
-      ),
+    _tabController = TabController(
+      length: 7,
+      vsync: this,
     );
 
-    if (selected != null) _connectToBluetooth(selected.address);
+    _selectedProfile = ecuProfiles.last;
   }
-
-  Future<void> _connectToBluetooth(String address) async {
-    setState(() => _isConnecting = true);
-    try {
-      BluetoothConnection connection = await BluetoothConnection.toAddress(address);
-      setState(() {
-        _connection = connection;
-        _isConnected = true;
-        _isConnecting = false;
-      });
-
-      connection.input!.listen(_onDataReceived).onDone(_disconnect);
-
-      await Future.delayed(const Duration(milliseconds: 300));
-      await _applyProfileConfig();
-
-      _startLivePolling();
-      _showSnack('اتصال به خودرو برقرار شد: ${_selectedProfile.title}');
-    } catch (e) {
-      setState(() => _isConnecting = false);
-      _showSnack('خطا در اتصال بلوتوث: $e');
-    }
-  }
-
-  Future<void> _applyProfileConfig() async {
-    if (!_isConnected) return;
-    _sendRaw('ATZ\r');
-    await Future.delayed(const Duration(milliseconds: 400));
-    _sendRaw('ATE0\r');
-    await Future.delayed(const Duration(milliseconds: 150));
-    _sendRaw('ATH0\r');
-    await Future.delayed(const Duration(milliseconds: 150));
-    _sendRaw('ATAT1\r');
-    await Future.delayed(const Duration(milliseconds: 150));
-
-    // قفل کردن پروتکل اختصاصی ایسیو
-    _sendRaw('${_selectedProfile.protocolCmd}\r');
-    await Future.delayed(const Duration(milliseconds: 200));
-
-    // تنظیم هدر اختصاصی
-    if (_selectedProfile.headerCmd != null) {
-      _sendRaw('${_selectedProfile.headerCmd}\r');
-      await Future.delayed(const Duration(milliseconds: 150));
-    }
-  }
-
-  void _disconnect() {
-    _pollingTimer?.cancel();
-    _connection?.dispose();
-    _connection = null;
-    setState(() {
-      _isConnected = false;
-      _isConnecting = false;
-      _activeActuatorName = null;
-    });
-  }
-
-  void _sendRaw(String cmd) {
-    if (_connection != null && _isConnected) {
-      _connection!.output.add(Uint8List.fromList(cmd.codeUnits));
-      _connection!.output.allSent;
-    }
-  }
-
-  void _onDataReceived(Uint8List data) {
-    _serialBuffer += utf8.decode(data, allowMalformed: true);
-    while (_serialBuffer.contains('>')) {
-      int promptIdx = _serialBuffer.indexOf('>');
-      String response = _serialBuffer.substring(0, promptIdx).trim();
-      _serialBuffer = _serialBuffer.substring(promptIdx + 1);
-      if (response.isNotEmpty) _handleElmResponse(response);
-    }
-  }
-
-  void _handleElmResponse(String resp) {
-    setState(() {
-      if (_terminalLogs.length > 50) _terminalLogs.removeAt(0);
-      _terminalLogs.add(resp.replaceAll('\r', ' '));
-    });
-
-    String clean = resp.replaceAll(RegExp(r'\s+'), '').toUpperCase();
-
-    // ولتاژ
-    if (resp.contains('V') && double.tryParse(resp.replaceAll('V', '').trim()) != null) {
-      setState(() => _voltage = double.tryParse(resp.replaceAll('V', '').trim()) ?? _voltage);
-      return;
-    }
-
-    // سنسورهای استاندارد Mode 01
-    if (clean.contains('41')) {
-      int idx = clean.indexOf('41');
-      if (clean.length >= idx + 4) {
-        String pid = clean.substring(idx + 2, idx + 4);
-        String payload = clean.substring(idx + 4);
-
-        setState(() {
-          switch (pid) {
-            case '0C': // دور موتور
-              if (payload.length >= 4) {
-                int a = int.parse(payload.substring(0, 2), radix: 16);
-                int b = int.parse(payload.substring(2, 4), radix: 16);
-                _rpm = ((a * 256) + b) ~/ 4;
-              }
-              break;
-            case '0D': // سرعت
-              if (payload.length >= 2) _speed = int.parse(payload.substring(0, 2), radix: 16);
-              break;
-            case '05': // دمای آب
-              if (payload.length >= 2) _coolant = int.parse(payload.substring(0, 2), radix: 16) - 40;
-              break;
-            case '11': // دریچه گاز
-              if (payload.length >= 2) _throttle = (int.parse(payload.substring(0, 2), radix: 16) * 100) ~/ 255;
-              break;
-            case '04': // لود موتور
-              if (payload.length >= 2) _engineLoad = (int.parse(payload.substring(0, 2), radix: 16) * 100) ~/ 255;
-              break;
-            case '0F': // دمای هوا
-              if (payload.length >= 2) _intakeAirTemp = int.parse(payload.substring(0, 2), radix: 16) - 40;
-              break;
-            case '14': // سنسور اکسیژن بالا
-              if (payload.length >= 2) {
-                int a = int.parse(payload.substring(0, 2), radix: 16);
-                _o2SensorVoltage = a / 200.0;
-              }
-              break;
-            case 'A6': // کیلومتر جهانی
-              if (payload.length >= 8) {
-                int a = int.parse(payload.substring(0, 2), radix: 16);
-                int b = int.parse(payload.substring(2, 4), radix: 16);
-                int c = int.parse(payload.substring(4, 6), radix: 16);
-                int d = int.parse(payload.substring(6, 8), radix: 16);
-                int val = ((a * 16777216) + (b * 65536) + (c * 256) + d) ~/ 10;
-                if (val > 0) _odometer = val;
-              }
-              break;
-          }
-        });
-      }
-    }
-
-    // کیلومتر کدهای اختصاصی ایرانی و چینی (Service 21 & 22)
-    final List<String> odoHeaders = ['6101', '62F190', '620202', '622002', '620101'];
-    for (String hdr in odoHeaders) {
-      if (clean.contains(hdr)) {
-        int offset = clean.indexOf(hdr) + hdr.length;
-        String payload = clean.substring(offset);
-        if (payload.length >= 6) {
-          int a = int.parse(payload.substring(0, 2), radix: 16);
-          int b = int.parse(payload.substring(2, 4), radix: 16);
-          int c = int.parse(payload.substring(4, 6), radix: 16);
-          int odo = (a * 65536) + (b * 256) + c;
-          if (odo > 500 && odo < 2500000) {
-            setState(() => _odometer = odo);
-            break;
-          }
-        }
-      }
-    }
-
-    // کدهای خطا
-    if (clean.contains('43')) {
-      int idx = clean.indexOf('43');
-      String dtcBytes = clean.substring(idx + 2);
-      List<String> found = [];
-      for (int i = 0; i + 4 <= dtcBytes.length; i += 4) {
-        String word = dtcBytes.substring(i, i + 4);
-        if (word == '0000') continue;
-        int b1 = int.parse(word.substring(0, 2), radix: 16);
-        int b2 = int.parse(word.substring(2, 4), radix: 16);
-        String prefix = ['P', 'C', 'B', 'U'][(b1 & 0xC0) >> 6];
-        String code = '$prefix${(b1 & 0x3F).toRadixString(16).padLeft(2, '0')}${b2.toRadixString(16).padLeft(2, '0')}'.toUpperCase();
-        found.add(code);
-      }
-      setState(() {
-        _dtcList.clear();
-        _dtcList.addAll(found);
-        _isLoadingDTC = false;
-      });
-    }
-  }
-
-  void _startLivePolling() {
-    if (_activeActuatorName != null) return;
-    _pollingTimer?.cancel();
-    int step = 0;
-    _pollingTimer = Timer.periodic(const Duration(milliseconds: 180), (t) async {
-      if (!_isConnected || _activeActuatorName != null || _isBusy) return;
-      _isBusy = true;
-      switch (step % 7) {
-        case 0:
-          _sendRaw('010C\r'); // RPM
-          break;
-        case 1:
-          _sendRaw('010D\r'); // Speed
-          break;
-        case 2:
-          _sendRaw('0105\r'); // Coolant
-          break;
-        case 3:
-          _sendRaw('0111\r'); // Throttle
-          break;
-        case 4:
-          _sendRaw('0114\r'); // O2 Sensor
-          break;
-        case 5:
-          _sendRaw('ATRV\r'); // Battery Voltage
-          break;
-        case 6:
-          if (_odometer == 0) _sendRaw('${_selectedProfile.odoMode}\r');
-          break;
-      }
-      step++;
-      await Future.delayed(const Duration(milliseconds: 140));
-      _isBusy = false;
-    });
-  }
-
-  // تست عملگر منطبق با پروفایل خودرو
-  Future<void> _executeSmartActuatorTest(List<String> candidates, String name) async {
-    if (!_isConnected && !_isDemoMode) {
-      _showSnack('ابتدا دانگل بلوتوث را متصل کنید.');
-      return;
-    }
-
-    if (_isDemoMode) {
-      setState(() => _activeActuatorName = name);
-      _showSnack('تست شبیه‌ساز: $name فعال شد.');
-      await Future.delayed(const Duration(seconds: 2));
-      setState(() => _activeActuatorName = null);
-      return;
-    }
-
-    setState(() => _activeActuatorName = name);
-    _pollingTimer?.cancel();
-    _showSnack('در حال ارسال دستور تست به ایسیو: $name');
-
-    try {
-      // ۱. ارسال هدر اختصاصی
-      if (_selectedProfile.headerCmd != null) {
-        _sendRaw('${_selectedProfile.headerCmd}\r');
-        await Future.delayed(const Duration(milliseconds: 100));
-      }
-
-      // ۲. ورود به سشن عیب‌یابی بر اساس نوع ایسیو
-      if (_selectedProfile.protocolCmd.contains('5') || _selectedProfile.protocolCmd.contains('4')) {
-        _sendRaw('10C0\r'); // KWP Siemens
-        await Future.delayed(const Duration(milliseconds: 100));
-        _sendRaw('1081\r'); // Sagem
-      } else {
-        _sendRaw('1003\r'); // UDS CAN
-      }
-      await Future.delayed(const Duration(milliseconds: 120));
-
-      // ۳. ارسال دستورات تست
-      for (String cmd in candidates) {
-        _sendRaw('$cmd\r');
-        await Future.delayed(const Duration(milliseconds: 250));
-      }
-
-      // ۴. زنده نگه‌داشتن سشن
-      _sendRaw('3E00\r');
-      await Future.delayed(const Duration(milliseconds: 1000));
-
-      // ۵. پایان سشن
-      _sendRaw('1001\r');
-      _showSnack('دستور تست عملگر $name ارسال شد.');
-    } catch (e) {
-      _showSnack('خطا در اجرای تست: $e');
-    } finally {
-      setState(() => _activeActuatorName = null);
-      _startLivePolling();
-    }
-  }
-
-  void _toggleDemoMode(bool enable) {
-    setState(() => _isDemoMode = enable);
-    _pollingTimer?.cancel();
-    _demoTimer?.cancel();
-    if (enable) {
-      if (_isConnected) _disconnect();
-      final rnd = Random();
-      _demoTimer = Timer.periodic(const Duration(milliseconds: 150), (t) {
-        setState(() {
-          _speed = (_speed + (rnd.nextInt(5) - 2)).clamp(0, 220);
-          _rpm = (_speed * 32 + 850 + rnd.nextInt(150)).clamp(850, 6800);
-          _coolant = 90;
-          _voltage = 13.9 + (rnd.nextDouble() * 0.3 - 0.15);
-          _throttle = (_speed ~/ 2.2).clamp(0, 100);
-          _engineLoad = (_speed ~/ 2.5 + 15).clamp(15, 95);
-          _intakeAirTemp = 32;
-          _odometer = 142380;
-          _o2SensorVoltage = 0.45 + (rnd.nextDouble() * 0.4 - 0.2);
-        });
-      });
-      _showSnack('شبیه‌ساز فعال شد.');
-    }
-  }
-
-  void _showSnack(String msg) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
 
   @override
   void dispose() {
-    _disconnect();
-    _demoTimer?.cancel();
-    _wsChannel?.sink.close();
+    _liveTimer?.cancel();
+    _inputSubscription?.cancel();
+    _connection?.dispose();
     _tabController.dispose();
+    _terminalController.dispose();
+
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFF00F0FF).withOpacity(0.15),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFF00F0FF), width: 1.2),
-              ),
-              child: const Text('RASA', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2, color: Color(0xFF00F0FF), fontSize: 14)),
+  /* ==========================================================
+     BLUETOOTH PERMISSIONS
+     ========================================================== */
+
+  Future<bool> _requestBluetoothPermissions() async {
+    if (Theme.of(context).platform == TargetPlatform.android) {
+      final scan = await Permission.bluetoothScan.request();
+      final connect = await Permission.bluetoothConnect.request();
+
+      return scan.isGranted && connect.isGranted;
+    }
+
+    return true;
+  }
+
+  /* ==========================================================
+     BLUETOOTH DEVICES
+     ========================================================== */
+
+  Future<void> _selectBluetoothDevice() async {
+    if (_connecting) return;
+
+    final granted = await _requestBluetoothPermissions();
+
+    if (!granted) {
+      _showMessage(
+        'دسترسی Bluetooth برای اتصال لازم است.',
+      );
+      return;
+    }
+
+    final bluetooth = FlutterBluetoothSerial.instance;
+
+    final enabled = await bluetooth.isEnabled ?? false;
+
+    if (!enabled) {
+      _showMessage(
+        'ابتدا Bluetooth گوشی را روشن کنید.',
+      );
+      return;
+    }
+
+    final devices = await bluetooth.getBondedDevices();
+
+    if (!mounted) return;
+
+    if (devices.isEmpty) {
+      _showMessage(
+        'هیچ دستگاه Bluetooth جفت‌شده‌ای پیدا نشد.',
+      );
+      return;
+    }
+
+    final selected = await showDialog<BluetoothDevice>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('انتخاب آداپتور دیاگ'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: devices.length,
+              itemBuilder: (context, index) {
+                final device = devices[index];
+
+                return ListTile(
+                  leading: const Icon(
+                    Icons.bluetooth,
+                  ),
+                  title: Text(
+                    device.name ?? 'Unknown',
+                  ),
+                  subtitle: Text(
+                    device.address,
+                  ),
+                  onTap: () {
+                    Navigator.pop(
+                      context,
+                      device,
+                    );
+                  },
+                );
+              },
             ),
-            const SizedBox(width: 8),
-            const Text('DIAGNOSTICS', style: TextStyle(fontWeight: FontWeight.w400, fontSize: 13, letterSpacing: 1)),
-          ],
+          ),
+        );
+      },
+    );
+
+    if (selected == null) return;
+
+    await _connectToDevice(selected);
+  }
+
+  /* ==========================================================
+     CONNECT
+     ========================================================== */
+
+  Future<void> _connectToDevice(
+    BluetoothDevice device,
+  ) async {
+    if (_connecting) return;
+
+    setState(() {
+      _connecting = true;
+    });
+
+    try {
+      await _disconnect();
+
+      final connection =
+          await BluetoothConnection.toAddress(
+        device.address,
+      );
+
+      _connection = connection;
+
+      _inputSubscription =
+          connection.input?.listen(
+        _onDataReceived,
+        onDone: () {
+          if (mounted) {
+            setState(() {
+              _connected = false;
+              _connecting = false;
+            });
+          }
+        },
+        onError: (_) {
+          if (mounted) {
+            setState(() {
+              _connected = false;
+              _connecting = false;
+            });
+          }
+        },
+      );
+
+      setState(() {
+        _connected = true;
+        _connecting = false;
+        _adapterInfo =
+            '${device.name ?? 'Bluetooth'} - ${device.address}';
+      });
+
+      await _initializeAdapter();
+
+      _showMessage(
+        'آداپتور با موفقیت متصل شد.',
+      );
+    } catch (e) {
+      await _disconnect();
+
+      if (mounted) {
+        setState(() {
+          _connecting = false;
+          _connected = false;
+        });
+
+        _showMessage(
+          'خطا در اتصال: $e',
+        );
+      }
+    }
+  }
+
+  /* ==========================================================
+     DISCONNECT
+     ========================================================== */
+
+  Future<void> _disconnect() async {
+    _liveTimer?.cancel();
+    _liveTimer = null;
+
+    await _inputSubscription?.cancel();
+    _inputSubscription = null;
+
+    try {
+      await _connection?.finish();
+    } catch (_) {}
+
+    _connection = null;
+
+    for (final waiter in _waiters.values) {
+      if (!waiter.isCompleted) {
+        waiter.complete('');
+      }
+    }
+
+    _waiters.clear();
+
+    if (mounted) {
+      setState(() {
+        _connected = false;
+        _connecting = false;
+      });
+    }
+  }
+
+  /* ==========================================================
+     RX DATA
+     ========================================================== */
+
+  void _onDataReceived(Uint8List data) {
+    final text = ascii.decode(
+      data,
+      allowInvalid: true,
+    );
+
+    _rxBuffer.write(text);
+
+    _processReceiveBuffer();
+  }
+
+  void _processReceiveBuffer() {
+    while (true) {
+      final value = _rxBuffer.toString();
+
+      final index = value.indexOf('>');
+
+      if (index < 0) {
+        return;
+      }
+
+      final frame = value.substring(
+        0,
+        index,
+      );
+
+      _rxBuffer.clear();
+      _rxBuffer.write(
+        value.substring(index + 1),
+      );
+
+      final cleaned = frame.trim();
+
+      if (cleaned.isEmpty) {
+        continue;
+      }
+
+      _terminalLog.add(
+        '< $cleaned',
+      );
+
+      if (_terminalLog.length > 200) {
+        _terminalLog.removeAt(0);
+      }
+
+      _resolveWaiter(cleaned);
+
+      if (mounted) {
+        setState(() {});
+      }
+    }
+  }
+
+  /* ==========================================================
+     WAITERS
+     ========================================================== */
+
+  void _resolveWaiter(String response) {
+    if (_waiters.isEmpty) return;
+
+    final keys = _waiters.keys.toList();
+
+    for (final key in keys) {
+      final waiter = _waiters[key];
+
+      if (waiter == null || waiter.isCompleted) {
+        _waiters.remove(key);
+        continue;
+      }
+
+      if (_responseMatches(
+        key,
+        response,
+      )) {
+        waiter.complete(response);
+        _waiters.remove(key);
+        return;
+      }
+    }
+
+    if (_waiters.length == 1) {
+      final key = _waiters.keys.first;
+      final waiter = _waiters[key];
+
+      if (waiter != null && !waiter.isCompleted) {
+        waiter.complete(response);
+        _waiters.remove(key);
+      }
+    }
+  }
+
+  bool _responseMatches(
+    String command,
+    String response,
+  ) {
+    final cmd = command
+        .replaceAll(' ', '')
+        .toUpperCase();
+
+    final res = response
+        .replaceAll(' ', '')
+        .toUpperCase();
+
+    if (res.contains('NO DATA')) return true;
+    if (res.contains('ERROR')) return true;
+    if (res.contains('?')) return true;
+
+    if (cmd.startsWith('01')) {
+      if (cmd.length >= 4) {
+        final pid = cmd.substring(2, 4);
+
+        return res.contains(
+          '41$pid',
+        );
+      }
+    }
+
+    if (cmd == '03') {
+      return res.contains('43') ||
+          res.contains('NO DATA');
+    }
+
+    if (cmd == '04') {
+      return res.contains('44') ||
+          res.contains('OK');
+    }
+
+    return true;
+  }
+
+  /* ==========================================================
+     SEND RAW
+     ========================================================== */
+
+  Future<void> _sendRaw(
+    String command,
+  ) async {
+    if (_connection == null) {
+      throw Exception(
+        'Bluetooth connected نیست',
+      );
+    }
+
+    final cmd = command.trim();
+
+    if (cmd.isEmpty) return;
+
+    _terminalLog.add(
+      '> $cmd',
+    );
+
+    if (_terminalLog.length > 200) {
+      _terminalLog.removeAt(0);
+    }
+
+    final bytes = Uint8List.fromList(
+      ascii.encode('$cmd\r'),
+    );
+
+    _connection!.output.add(bytes);
+
+    await _connection!.output.allSent;
+  }
+
+  /* ==========================================================
+     SEND AND WAIT
+     ========================================================== */
+
+  Future<String> _sendAndWait(
+    String command, {
+    Duration timeout =
+        const Duration(seconds: 3),
+  }) async {
+    if (_connection == null) {
+      return '';
+    }
+
+    final cmd = command.trim();
+
+    final completer = Completer<String>();
+
+    _waiters[cmd] = completer;
+
+    await _sendRaw(cmd);
+
+    try {
+      return await completer.future.timeout(
+        timeout,
+        onTimeout: () {
+          _waiters.remove(cmd);
+          return '';
+        },
+      );
+    } catch (_) {
+      _waiters.remove(cmd);
+      return '';
+    }
+  }
+
+  /* ==========================================================
+     ADAPTER INITIALIZATION
+     ========================================================== */
+
+  Future<void> _initializeAdapter() async {
+    if (!_connected) return;
+
+    final commands = <String>[
+      'ATZ',
+      'ATE0',
+      'ATL0',
+      'ATS0',
+      'ATH1',
+      'ATI',
+      'ATAT1',
+      'ATSP0',
+      'ATDP',
+    ];
+
+    for (final command in commands) {
+      await _sendAndWait(
+        command,
+        timeout: const Duration(seconds: 4),
+      );
+
+      await Future.delayed(
+        const Duration(milliseconds: 150),
+      );
+    }
+
+    final protocol =
+        await _sendAndWait('ATDP');
+
+    if (protocol.isNotEmpty) {
+      _protocolInfo = protocol.trim();
+    }
+
+    await _identifyVehicle();
+  }
+
+  /* ==========================================================
+     SELECT ECU PROFILE
+     ========================================================== */
+
+  Future<void> _applyProfile(
+    EcuProfile profile,
+  ) async {
+    if (!_connected) {
+      _showMessage(
+        'ابتدا به آداپتور متصل شوید.',
+      );
+      return;
+    }
+
+    setState(() {
+      _selectedProfile = profile;
+      _ecuModel = profile.model;
+    });
+
+    await _sendAndWait(
+      profile.protocolCommand,
+    );
+
+    await Future.delayed(
+      const Duration(milliseconds: 200),
+    );
+
+    if (profile.family != 'OBD') {
+      await _sendAndWait(
+        'ATSH ${profile.header}',
+      );
+    }
+
+    final protocol =
+        await _sendAndWait('ATDP');
+
+    if (protocol.isNotEmpty) {
+      setState(() {
+        _protocolInfo = protocol.trim();
+      });
+    }
+
+    _showMessage(
+      'پروفایل ${profile.displayName} اعمال شد.',
+    );
+  }
+
+  /* ==========================================================
+     VEHICLE IDENTIFICATION
+     ========================================================== */
+
+  Future<void> _identifyVehicle() async {
+    if (!_connected) return;
+
+    final profile = _selectedProfile;
+
+    if (profile != null &&
+        profile.family == 'KWP') {
+      await _sendAndWait(
+        profile.protocolCommand,
+      );
+
+      await _sendAndWait(
+        'ATSH ${profile.header}',
+      );
+    }
+
+    final protocol =
+        await _sendAndWait('ATDP');
+
+    if (protocol.isNotEmpty) {
+      _protocolInfo = protocol.trim();
+    }
+
+    String vin = '';
+
+    final vinResponse =
+        await _sendAndWait(
+      '0902',
+      timeout: const Duration(seconds: 5),
+    );
+
+    if (vinResponse.isNotEmpty) {
+      vin = _decodeObdAscii(
+        vinResponse,
+        service: '4902',
+      );
+    }
+
+    if (vin.isNotEmpty) {
+      _vin = vin;
+    }
+
+    final ecuNameResponse =
+        await _sendAndWait(
+      '090A',
+      timeout: const Duration(seconds: 4),
+    );
+
+    final ecuName = _decodeObdAscii(
+      ecuNameResponse,
+      service: '490A',
+    );
+
+    if (ecuName.isNotEmpty) {
+      _ecuModel = ecuName;
+    } else if (profile != null) {
+      _ecuModel = profile.model;
+    } else {
+      _ecuModel = 'ECU OBD-II';
+    }
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  /* ==========================================================
+     OBD ASCII DECODER
+     ========================================================== */
+
+  String _decodeObdAscii(
+    String response, {
+    required String service,
+  }) {
+    final cleaned = response
+        .replaceAll('\r', ' ')
+        .replaceAll('\n', ' ')
+        .replaceAll('>', ' ')
+        .trim();
+
+    final normalized =
+        cleaned.toUpperCase();
+
+    final start =
+        normalized.indexOf(service);
+
+    if (start < 0) {
+      return '';
+    }
+
+    final hexPart =
+        normalized.substring(start + service.length);
+
+    final hexTokens = RegExp(
+      r'[0-9A-F]{2}',
+    ).allMatches(hexPart);
+
+    final bytes = <int>[];
+
+    for (final match in hexTokens) {
+      final value = int.tryParse(
+        match.group(0)!,
+        radix: 16,
+      );
+
+      if (value != null &&
+          value >= 0x20 &&
+          value <= 0x7E) {
+        bytes.add(value);
+      }
+    }
+
+    if (bytes.isEmpty) {
+      return '';
+    }
+
+    return String.fromCharCodes(bytes).trim();
+  }
+}
+/* ============================================================
+   LIVE DATA
+   ============================================================ */
+
+Future<void> _readLiveData() async {
+  if (!_connected || _isBusy) return;
+
+  _isBusy = true;
+
+  try {
+    final data = LiveData();
+
+    final rpm = await _sendAndWait(
+      '010C',
+      timeout: const Duration(seconds: 2),
+    );
+
+    data.rpm = _parseRpm(rpm);
+
+    final speed = await _sendAndWait(
+      '010D',
+      timeout: const Duration(seconds: 2),
+    );
+
+    data.speed = _parseSpeed(speed);
+
+    final coolant = await _sendAndWait(
+      '0105',
+      timeout: const Duration(seconds: 2),
+    );
+
+    data.coolant = _parseTemperature(
+      coolant,
+      '4105',
+    );
+
+    final throttle = await _sendAndWait(
+      '0111',
+      timeout: const Duration(seconds: 2),
+    );
+
+    data.throttle = _parsePercentage(
+      throttle,
+      '4111',
+    );
+
+    final load = await _sendAndWait(
+      '0104',
+      timeout: const Duration(seconds: 2),
+    );
+
+    data.engineLoad = _parsePercentage(
+      load,
+      '4104',
+    );
+
+    final intake = await _sendAndWait(
+      '010F',
+      timeout: const Duration(seconds: 2),
+    );
+
+    data.intakeAir = _parseTemperature(
+      intake,
+      '410F',
+    );
+
+    final oxygen = await _sendAndWait(
+      '0114',
+      timeout: const Duration(seconds: 2),
+    );
+
+    data.oxygen = _parseOxygen(
+      oxygen,
+    );
+
+    final battery = await _sendAndWait(
+      'ATRV',
+      timeout: const Duration(seconds: 2),
+    );
+
+    data.battery = _parseBattery(
+      battery,
+    );
+
+    if (mounted) {
+      setState(() {
+        _liveData = data;
+      });
+    }
+  } finally {
+    _isBusy = false;
+  }
+}
+
+/* ============================================================
+   LIVE DATA TIMER
+   ============================================================ */
+
+void _startLiveData() {
+  _liveTimer?.cancel();
+
+  if (!_connected) {
+    return;
+  }
+
+  _liveTimer = Timer.periodic(
+    const Duration(seconds: 1),
+    (_) async {
+      await _readLiveData();
+    },
+  );
+
+  _readLiveData();
+}
+
+void _stopLiveData() {
+  _liveTimer?.cancel();
+  _liveTimer = null;
+}
+
+/* ============================================================
+   OBD PARSING
+   ============================================================ */
+
+List<int> _extractHexBytes(
+  String response,
+) {
+  final cleaned = response
+      .replaceAll('\r', ' ')
+      .replaceAll('\n', ' ')
+      .replaceAll('>', ' ')
+      .replaceAll(':', ' ')
+      .toUpperCase();
+
+  final matches = RegExp(
+    r'\b[0-9A-F]{2}\b',
+  ).allMatches(cleaned);
+
+  final bytes = <int>[];
+
+  for (final match in matches) {
+    final value = int.tryParse(
+      match.group(0)!,
+      radix: 16,
+    );
+
+    if (value != null) {
+      bytes.add(value);
+    }
+  }
+
+  return bytes;
+}
+
+double? _parseRpm(
+  String response,
+) {
+  final bytes = _extractHexBytes(
+    response,
+  );
+
+  for (var i = 0; i < bytes.length - 3; i++) {
+    if (bytes[i] == 0x41 &&
+        bytes[i + 1] == 0x0C) {
+      final a = bytes[i + 2];
+      final b = bytes[i + 3];
+
+      return ((a * 256) + b) / 4.0;
+    }
+  }
+
+  return null;
+}
+
+double? _parseSpeed(
+  String response,
+) {
+  final bytes = _extractHexBytes(
+    response,
+  );
+
+  for (var i = 0; i < bytes.length - 2; i++) {
+    if (bytes[i] == 0x41 &&
+        bytes[i + 1] == 0x0D) {
+      return bytes[i + 2].toDouble();
+    }
+  }
+
+  return null;
+}
+
+double? _parseTemperature(
+  String response,
+  String service,
+) {
+  final serviceBytes = _hexPairList(
+    service,
+  );
+
+  if (serviceBytes.length != 2) {
+    return null;
+  }
+
+  final bytes = _extractHexBytes(
+    response,
+  );
+
+  for (var i = 0; i < bytes.length - 2; i++) {
+    if (bytes[i] == serviceBytes[0] &&
+        bytes[i + 1] == serviceBytes[1]) {
+      return bytes[i + 2] - 40.0;
+    }
+  }
+
+  return null;
+}
+
+double? _parsePercentage(
+  String response,
+  String service,
+) {
+  final serviceBytes = _hexPairList(
+    service,
+  );
+
+  if (serviceBytes.length != 2) {
+    return null;
+  }
+
+  final bytes = _extractHexBytes(
+    response,
+  );
+
+  for (var i = 0; i < bytes.length - 2; i++) {
+    if (bytes[i] == serviceBytes[0] &&
+        bytes[i + 1] == serviceBytes[1]) {
+      return bytes[i + 2] * 100.0 / 255.0;
+    }
+  }
+
+  return null;
+}
+
+double? _parseOxygen(
+  String response,
+) {
+  final bytes = _extractHexBytes(
+    response,
+  );
+
+  for (var i = 0; i < bytes.length - 3; i++) {
+    if (bytes[i] == 0x41 &&
+        bytes[i + 1] == 0x14) {
+      final a = bytes[i + 2];
+      final b = bytes[i + 3];
+
+      return a / 200.0;
+    }
+  }
+
+  return null;
+}
+
+double? _parseBattery(
+  String response,
+) {
+  final normalized = response
+      .replaceAll('\r', ' ')
+      .replaceAll('\n', ' ')
+      .replaceAll('>', ' ')
+      .trim();
+
+  final match = RegExp(
+    r'([0-9]+(?:\.[0-9]+)?)',
+  ).firstMatch(normalized);
+
+  if (match == null) {
+    return null;
+  }
+
+  return double.tryParse(
+    match.group(1)!,
+  );
+}
+
+List<int> _hexPairList(
+  String value,
+) {
+  final result = <int>[];
+
+  final clean = value
+      .replaceAll(' ', '')
+      .toUpperCase();
+
+  for (var i = 0; i + 1 < clean.length; i += 2) {
+    final byte = int.tryParse(
+      clean.substring(i, i + 2),
+      radix: 16,
+    );
+
+    if (byte != null) {
+      result.add(byte);
+    }
+  }
+
+  return result;
+}
+
+/* ============================================================
+   DTC SCAN
+   ============================================================ */
+
+Future<void> _scanDtc() async {
+  if (!_connected) {
+    _showMessage(
+      'ابتدا به خودرو متصل شوید.',
+    );
+    return;
+  }
+
+  if (_isBusy) return;
+
+  _isBusy = true;
+
+  try {
+    final response = await _sendAndWait(
+      '03',
+      timeout: const Duration(seconds: 5),
+    );
+
+    final parsed = _parseObdDtcs(
+      response,
+    );
+
+    if (mounted) {
+      setState(() {
+        _dtcs
+          ..clear()
+          ..addAll(parsed);
+      });
+    }
+
+    if (parsed.isEmpty) {
+      _showMessage(
+        'خطایی از نوع OBD-II پیدا نشد.',
+      );
+    } else {
+      _showMessage(
+        '${parsed.length} کد خطا پیدا شد.',
+      );
+    }
+  } finally {
+    _isBusy = false;
+  }
+}
+
+/* ============================================================
+   CLEAR DTC
+   ============================================================ */
+
+Future<void> _clearDtc() async {
+  if (!_connected) {
+    _showMessage(
+      'ابتدا به خودرو متصل شوید.',
+    );
+    return;
+  }
+
+  final confirmed =
+      await showDialog<bool>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text(
+          'پاک کردن خطاها',
         ),
-        centerTitle: true,
-        backgroundColor: const Color(0xFF0C1018),
-        elevation: 0,
+        content: const Text(
+          'این عملیات کدهای خطای ذخیره‌شده را پاک می‌کند. '
+          'آیا مطمئن هستید؟',
+        ),
         actions: [
-          IconButton(
-            icon: Icon(_isDemoMode ? Icons.play_circle_fill_rounded : Icons.play_circle_outline_rounded,
-                color: _isDemoMode ? const Color(0xFFFFD600) : Colors.grey),
-            onPressed: () => _toggleDemoMode(!_isDemoMode),
-          ),
-          IconButton(
-            icon: _isConnecting
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF00F0FF)))
-                : Icon(_isConnected ? Icons.bluetooth_connected_rounded : Icons.bluetooth_disabled_rounded,
-                    color: _isConnected ? const Color(0xFF00F0FF) : const Color(0xFFFF2A55)),
-            onPressed: _isConnected ? _disconnect : _showDeviceSelectionDialog,
-          ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: const Color(0xFF00F0FF),
-          indicatorWeight: 3,
-          isScrollable: true,
-          labelColor: const Color(0xFF00F0FF),
-          unselectedLabelColor: Colors.grey,
-          tabs: const [
-            Tab(icon: Icon(Icons.speed_rounded), text: 'داشبورد'),
-            Tab(icon: Icon(Icons.directions_car_rounded), text: 'انتخاب خودرو'),
-            Tab(icon: Icon(Icons.cloud_sync_rounded), text: 'ریموت'),
-            Tab(icon: Icon(Icons.analytics_rounded), text: 'سنسورها'),
-            Tab(icon: Icon(Icons.warning_amber_rounded), text: 'خطاها'),
-            Tab(icon: Icon(Icons.tune_rounded), text: 'عملگرها'),
-            Tab(icon: Icon(Icons.terminal_rounded), text: 'ترمینال'),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildCockpitDashboard(),
-          _buildCarSelectionTab(),
-          _buildRemoteSupportTab(),
-          _buildSensorsListTab(),
-          _buildDtcTab(),
-          _buildActuatorsTab(),
-          _buildTerminalTab(),
-        ],
-      ),
-    );
-  }
-
-  // ۱. داشبورد با گیج‌ها و سنسور اکسیژن
-  Widget _buildCockpitDashboard() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: RasaRadialGauge(
-                  label: 'دور موتور',
-                  value: '$_rpm',
-                  unit: 'RPM',
-                  progress: (_rpm / 7000).clamp(0.0, 1.0),
-                  glowColor: _rpm > 5500 ? const Color(0xFFFF2A55) : const Color(0xFF00F0FF),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: RasaRadialGauge(
-                  label: 'سرعت لحظه‌ای',
-                  value: '$_speed',
-                  unit: 'KM/H',
-                  progress: (_speed / 240).clamp(0.0, 1.0),
-                  glowColor: const Color(0xFF00E676),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(child: _buildTelemetryCard('دمای آب', '$_coolant °C', Icons.thermostat_rounded, _coolant > 98 ? const Color(0xFFFF2A55) : const Color(0xFFFF9100))),
-              const SizedBox(width: 8),
-              Expanded(child: _buildTelemetryCard('دریچه گاز', '$_throttle %', Icons.shutter_speed_rounded, const Color(0xFFD500F9))),
-              const SizedBox(width: 8),
-              Expanded(child: _buildTelemetryCard('ولتاژ دینام', '${_voltage.toStringAsFixed(1)} V', Icons.bolt_rounded, const Color(0xFFFFD600))),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: const Color(0xFF10141E),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFF00E676).withOpacity(0.3)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.air_rounded, color: Color(0xFF00E676), size: 22),
-                    SizedBox(width: 10),
-                    Text('ولتاژ سنسور اکسیژن (O2 Sensor):', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                  ],
-                ),
-                Text(
-                  '${_o2SensorVoltage.toStringAsFixed(3)} V',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: _o2SensorVoltage > 0.45 ? const Color(0xFF00E676) : const Color(0xFFFF9100),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: const Color(0xFF10141E),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFF00F0FF).withOpacity(0.3)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.add_road_rounded, color: Color(0xFF00F0FF), size: 22),
-                    SizedBox(width: 10),
-                    Text('کارکرد واقعی خودرو (ایسیو):', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                  ],
-                ),
-                Text(
-                  _odometer > 0 ? '$_odometer KM' : 'در حال استعلام...',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF00F0FF), letterSpacing: 1),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              color: const Color(0xFF10141E),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white10),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _isConnected || _isDemoMode ? const Color(0xFF00E676) : const Color(0xFFFF2A55),
-                    boxShadow: [
-                      BoxShadow(
-                        color: (_isConnected || _isDemoMode ? const Color(0xFF00E676) : const Color(0xFFFF2A55)).withOpacity(0.6),
-                        blurRadius: 8,
-                        spreadRadius: 2,
-                      )
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    _isConnected ? 'متصل به خودرو: ${_selectedProfile.title}' : (_isDemoMode ? 'حالت شبیه‌ساز (دمو)' : 'سیستم آماده اتصال به بلوتوث'),
-                    style: const TextStyle(fontSize: 12, color: Colors.white70),
-                  ),
-                ),
-              ],
-            ),
-          )
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTelemetryCard(String title, String val, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFF10141E),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.25)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, size: 22, color: color),
-          const SizedBox(height: 6),
-          Text(title, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-          const SizedBox(height: 4),
-          Text(val, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: color)),
-        ],
-      ),
-    );
-  }
-
-  // ۲. تب جدید انتخاب خودرو و ایسیو
-  Widget _buildCarSelectionTab() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: carProfiles.length,
-      itemBuilder: (ctx, i) {
-        final profile = carProfiles[i];
-        final isSelected = _selectedProfile == profile;
-
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: const Color(0xFF10141E),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isSelected ? const Color(0xFF00F0FF) : Colors.white10,
-              width: isSelected ? 1.8 : 1.0,
-            ),
-          ),
-          child: ListTile(
-            leading: Icon(
-              Icons.directions_car_filled_rounded,
-              color: isSelected ? const Color(0xFF00F0FF) : Colors.grey,
-            ),
-            title: Text(
-              profile.title,
-              style: TextStyle(
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? const Color(0xFF00F0FF) : Colors.white,
-                fontSize: 13,
-              ),
-            ),
-            subtitle: Text(
-              'پروتکل: ${profile.protocolCmd} | هدر: ${profile.headerCmd ?? "Auto"}',
-              style: const TextStyle(fontSize: 11, color: Colors.grey),
-            ),
-            trailing: isSelected
-                ? const Icon(Icons.check_circle_rounded, color: Color(0xFF00F0FF))
-                : const Icon(Icons.radio_button_off_rounded, color: Colors.white24),
-            onTap: () async {
-              setState(() {
-                _selectedProfile = profile;
-                _odometer = 0;
-              });
-              _showSnack('پروفایل ${profile.title} انتخاب شد.');
-              if (_isConnected) {
-                await _applyProfileConfig();
-              }
+          TextButton(
+            onPressed: () {
+              Navigator.pop(
+                context,
+                false,
+              );
             },
-          ),
-        );
-      },
-    );
-  }
-
-  // ۳. تب ریموت
-  Widget _buildRemoteSupportTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: const Color(0xFF10141E),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFF00F0FF).withOpacity(0.3)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.wifi_tethering_rounded, color: Color(0xFF00F0FF)),
-                    SizedBox(width: 8),
-                    Text('بخش مشتری (ارسال درخواست چکاپ)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                const Text('با فشردن دکمه زیر، یک کد اتصال تولید شده و خودرو آماده چکاپ ریموت توسط متخصص رسا می‌شود.', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                const SizedBox(height: 14),
-                if (_sessionPin.isNotEmpty && !_isExpertMode)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.black45,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFF00E676)),
-                    ),
-                    child: Column(
-                      children: [
-                        const Text('کد اتصال اختصاصی:', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                        const SizedBox(height: 4),
-                        Text(_sessionPin, style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, letterSpacing: 8, color: Color(0xFF00E676))),
-                      ],
-                    ),
-                  ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF00F0FF),
-                      foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: _startClientSession,
-                    icon: const Icon(Icons.radar_rounded),
-                    label: const Text('ایجاد سشن چکاپ آنلاین', style: TextStyle(fontWeight: FontWeight.bold)),
-                  ),
-                )
-              ],
+            child: const Text(
+              'انصراف',
             ),
           ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: const Color(0xFF10141E),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: const Color(0xFFD500F9).withOpacity(0.3)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.engineering_rounded, color: Color(0xFFD500F9)),
-                    SizedBox(width: 8),
-                    Text('پنل متخصص (کنترل و دیاگ از راه دور)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _expertPinController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    hintText: 'کد ۶ رقمی مشتری را وارد نمایید',
-                    filled: true,
-                    fillColor: Colors.black38,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFD500F9),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    onPressed: _connectAsExpert,
-                    icon: const Icon(Icons.sensors_rounded),
-                    label: const Text('اتصال به خودرو و دریافت تله‌متری', style: TextStyle(fontWeight: FontWeight.bold)),
-                  ),
-                )
-              ],
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(
+                context,
+                true,
+              );
+            },
+            child: const Text(
+              'پاک کردن',
             ),
           ),
         ],
-      ),
-    );
+      );
+    },
+  );
+
+  if (confirmed != true) {
+    return;
   }
 
-  // ۴. تب سنسورها
-  Widget _buildSensorsListTab() {
-    final sensors = [
-      {'name': 'ولتاژ سنسور اکسیژن (O2 Sensor)', 'val': '${_o2SensorVoltage.toStringAsFixed(3)} V', 'icon': Icons.air_rounded},
-      {'name': 'کیلومتر کارکرد خودرو (Odometer)', 'val': '$_odometer KM', 'icon': Icons.add_road_rounded},
-      {'name': 'دور موتور (Engine RPM)', 'val': '$_rpm RPM', 'icon': Icons.speed_rounded},
-      {'name': 'سرعت لحظه‌ای (Vehicle Speed)', 'val': '$_speed km/h', 'icon': Icons.directions_car_rounded},
-      {'name': 'دمای آب موتور (Coolant Temp)', 'val': '$_coolant °C', 'icon': Icons.thermostat_rounded},
-      {'name': 'زاویه دریچه گاز (Throttle)', 'val': '$_throttle %', 'icon': Icons.shutter_speed_rounded},
-      {'name': 'لود موتور (Engine Load)', 'val': '$_engineLoad %', 'icon': Icons.compress_rounded},
-      {'name': 'دمای هوای ورودی (Intake Temp)', 'val': '$_intakeAirTemp °C', 'icon': Icons.air_rounded},
-      {'name': 'ولتاژ باتری و دینام (Voltage)', 'val': '${_voltage.toStringAsFixed(1)} V', 'icon': Icons.bolt_rounded},
-    ];
+  final response = await _sendAndWait(
+    '04',
+    timeout: const Duration(seconds: 5),
+  );
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: sensors.length,
-      itemBuilder: (ctx, i) => Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: const Color(0xFF10141E),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white10),
-        ),
-        child: Row(
-          children: [
-            Icon(sensors[i]['icon'] as IconData, color: const Color(0xFF00F0FF), size: 22),
-            const SizedBox(width: 12),
-            Text(sensors[i]['name'] as String, style: const TextStyle(fontSize: 13)),
-            const Spacer(),
-            Text(sensors[i]['val'] as String, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00F0FF), fontSize: 14)),
-          ],
-        ),
-      ),
+  if (response.contains('44') ||
+      response.contains('OK')) {
+    setState(() {
+      _dtcs.clear();
+    });
+
+    _showMessage(
+      'درخواست پاک کردن خطا ارسال شد.',
     );
-  }
-
-  // ۵. تب کدهای خطا
-  Widget _buildDtcTab() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00E676),
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: () {
-                    setState(() => _isLoadingDTC = true);
-                    _sendRemoteCommand('03');
-                  },
-                  icon: const Icon(Icons.search_rounded),
-                  label: const Text('اسکن خطاهای ایسیو', style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF2A55),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: () {
-                    _sendRemoteCommand('04');
-                    setState(() => _dtcList.clear());
-                  },
-                  icon: const Icon(Icons.delete_sweep_rounded),
-                  label: const Text('پاک‌سازی حافظه خطا', style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: _isLoadingDTC
-                ? const Center(child: CircularProgressIndicator(color: Color(0xFF00F0FF)))
-                : _dtcList.isEmpty
-                    ? const Center(child: Text('هیچ خطایی ثبت نشده است.', style: TextStyle(color: Colors.grey)))
-                    : ListView.builder(
-                        itemCount: _dtcList.length,
-                        itemBuilder: (ctx, i) {
-                          final code = _dtcList[i];
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 10),
-                            color: const Color(0xFF141926),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              side: const BorderSide(color: Color(0xFFFF2A55), width: 0.8),
-                            ),
-                            child: ListTile(
-                              leading: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFF2A55).withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(code, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                              ),
-                              title: Text(dtcDescriptions[code] ?? 'کد خطای اختصاصی کارخانه', style: const TextStyle(fontSize: 13)),
-                            ),
-                          );
-                        },
-                      ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ۶. تب عملگرها
-  Widget _buildActuatorsTab() {
-    final actuators = [
-      {
-        'name': 'فن خنک‌کننده (دور کند)',
-        'icon': Icons.toys_rounded,
-        'candidates': ['2F01010301', '30010007', '300101', '310101', '2F100103'],
-      },
-      {
-        'name': 'فن خنک‌کننده (دور تند)',
-        'icon': Icons.toys_rounded,
-        'candidates': ['2F01020301', '30010008', '300102', '310102', '2F100203'],
-      },
-      {
-        'name': 'رله پمپ بنزین / دوبل',
-        'icon': Icons.local_gas_station_rounded,
-        'candidates': ['2F02010301', '30020001', '300201', '310201', '2F100303'],
-      },
-      {
-        'name': 'شیر برقی کنیستر',
-        'icon': Icons.filter_alt_rounded,
-        'candidates': ['2F04010301', '30040001', '300401', '310401', '2F100403'],
-      },
-      {
-        'name': 'چراغ چک پشت آمپر (MIL)',
-        'icon': Icons.warning_rounded,
-        'candidates': ['2F05010301', '30050001', '300501', '310501', '2F100503'],
-      },
-    ];
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: actuators.length,
-      itemBuilder: (ctx, i) {
-        final item = actuators[i];
-        final String actName = item['name'] as String;
-        final bool isThisRunning = _activeActuatorName == actName;
-        final bool isAnyOtherRunning = _activeActuatorName != null && !isThisRunning;
-
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: const Color(0xFF10141E),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: isThisRunning ? const Color(0xFF00F0FF) : Colors.white10,
-              width: isThisRunning ? 1.5 : 1.0,
-            ),
-          ),
-          child: ListTile(
-            leading: Icon(item['icon'] as IconData, color: isThisRunning ? const Color(0xFF00E676) : const Color(0xFF00F0FF)),
-            title: Text(actName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-            trailing: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isThisRunning
-                    ? const Color(0xFFFFD600)
-                    : (isAnyOtherRunning ? Colors.grey[800] : const Color(0xFF00E676)),
-                foregroundColor: Colors.black,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              onPressed: isAnyOtherRunning || isThisRunning
-                  ? null
-                  : () {
-                      _executeSmartActuatorTest(
-                        item['candidates'] as List<String>,
-                        actName,
-                      );
-                    },
-              child: isThisRunning
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
-                    )
-                  : const Text(
-                      'تست فعال‌سازی',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  // ۷. ترمینال مانیتورینگ
-  Widget _buildTerminalTab() {
-    final textController = TextEditingController();
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFF05070A),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white10),
-              ),
-              child: ListView.builder(
-                reverse: true,
-                itemCount: _terminalLogs.length,
-                itemBuilder: (ctx, i) => Text(
-                  _terminalLogs[_terminalLogs.length - 1 - i],
-                  style: const TextStyle(fontFamily: 'monospace', color: Color(0xFF00F0FF), fontSize: 12),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: textController,
-                  decoration: InputDecoration(
-                    hintText: 'ارسال دستور دستی (مثل 010C یا ATZ)',
-                    filled: true,
-                    fillColor: const Color(0xFF10141E),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              IconButton(
-                icon: const Icon(Icons.send_rounded, color: Color(0xFF00F0FF)),
-                onPressed: () {
-                  if (textController.text.isNotEmpty) {
-                    _sendRemoteCommand(textController.text.trim());
-                    textController.clear();
-                  }
-                },
-              )
-            ],
-          )
-        ],
-      ),
+  } else {
+    _showMessage(
+      'ECU پاسخ مثبت برای پاک کردن خطا نداد.',
     );
   }
 }
 
-// ---------------------------------------------------------------------------
-// ۴. ویجت رسم گیج عقربه‌ای نئونی
-// ---------------------------------------------------------------------------
-class RasaRadialGauge extends StatelessWidget {
-  final String label;
-  final String value;
-  final String unit;
-  final double progress;
-  final Color glowColor;
+/* ============================================================
+   DTC DECODER
+   ============================================================ */
 
-  const RasaRadialGauge({
-    super.key,
-    required this.label,
-    required this.value,
-    required this.unit,
-    required this.progress,
-    required this.glowColor,
+List<DtcItem> _parseObdDtcs(
+  String response,
+) {
+  final bytes = _extractHexBytes(
+    response,
+  );
+
+  final result = <DtcItem>[];
+
+  for (var i = 0; i + 1 < bytes.length; i++) {
+    if (bytes[i] != 0x43) {
+      continue;
+    }
+
+    for (
+      var j = i + 1;
+      j + 1 < bytes.length;
+      j += 2
+    ) {
+      final a = bytes[j];
+      final b = bytes[j + 1];
+
+      if (a == 0 && b == 0) {
+        continue;
+      }
+
+      final code = _decodeDtc(
+        a,
+        b,
+      );
+
+      if (code == null) {
+        continue;
+      }
+
+      if (result.any(
+        (item) => item.code == code,
+      )) {
+        continue;
+      }
+
+      result.add(
+        DtcItem(
+          code: code,
+          description:
+              dtcDescriptions[code] ??
+                  'شرح این کد در بانک اطلاعاتی موجود نیست.',
+        ),
+      );
+    }
+
+    break;
+  }
+
+  return result;
+}
+
+String? _decodeDtc(
+  int a,
+  int b,
+) {
+  final first =
+      (a >> 6) & 0x03;
+
+  const prefixes = [
+    'P',
+    'C',
+    'B',
+    'U',
+  ];
+
+  final prefix =
+      prefixes[first];
+
+  final digit2 =
+      (a >> 4) & 0x03;
+
+  final digit3 =
+      a & 0x0F;
+
+  final digit4 =
+      (b >> 4) & 0x0F;
+
+  final digit5 =
+      b & 0x0F;
+
+  return '$prefix'
+      '$digit2'
+      '${digit3.toRadixString(16).toUpperCase()}'
+      '${digit4.toRadixString(16).toUpperCase()}'
+      '${digit5.toRadixString(16).toUpperCase()}';
+}
+
+/* ============================================================
+   ECU INFORMATION
+   ============================================================ */
+
+Future<void> _readEcuInformation() async {
+  if (!_connected) {
+    _showMessage(
+      'ابتدا به آداپتور متصل شوید.',
+    );
+    return;
+  }
+
+  await _identifyVehicle();
+
+  final software =
+      await _sendAndWait(
+    '090A',
+    timeout: const Duration(seconds: 4),
+  );
+
+  final decoded =
+      _decodeObdAscii(
+    software,
+    service: '490A',
+  );
+
+  if (decoded.isNotEmpty) {
+    setState(() {
+      _ecuSoftware = decoded;
+    });
+  }
+
+  final protocol =
+      await _sendAndWait(
+    'ATDP',
+    timeout: const Duration(seconds: 3),
+  );
+
+  if (protocol.isNotEmpty) {
+    setState(() {
+      _protocolInfo =
+          protocol.trim();
+    });
+  }
+}
+
+/* ============================================================
+   ODOMETER
+   ============================================================ */
+
+Future<void> _readOdometer() async {
+  /*
+   * عمداً از PID عمومی 01A6 به عنوان کیلومتر واقعی
+   * استفاده نمی‌شود.
+   *
+   * کیلومتر واقعی خودرو وابسته به ECU / BCM / IPC
+   * و DID یا سرویس اختصاصی همان خودرو است.
+   *
+   * بنابراین تا زمانی که تعریف دقیق ECU مشخص نشده
+   * مقدار جعلی نمایش داده نمی‌شود.
+   */
+
+  _showMessage(
+    'کارکرد واقعی برای این ECU هنوز با تعریف اختصاصی فعال نشده است.',
+  );
+}
+
+/* ============================================================
+   ACTUATOR SAFETY
+   ============================================================ */
+
+Future<void> _runActuator(
+  String name,
+) async {
+  if (!_connected) {
+    _showMessage(
+      'ابتدا به ECU متصل شوید.',
+    );
+    return;
+  }
+
+  /*
+   * هیچ فرمان حدسی 2F / 30 / 31 / KWP
+   * به ECU ارسال نمی‌شود.
+   *
+   * برای اجرای واقعی عملگر باید:
+   *
+   * 1. ECU دقیق شناسایی شود.
+   * 2. سرویس و DID/Routine همان ECU مشخص باشد.
+   * 3. پاسخ مثبت ECU بررسی شود.
+   * 4. پیش‌شرط‌های ایمنی بررسی شوند.
+   * 5. فرمان توقف و timeout وجود داشته باشد.
+   */
+
+  final confirmed =
+      await showDialog<bool>(
+    context: context,
+    builder: (context) {
+      return AlertDialog(
+        title: const Text(
+          'عملگر',
+        ),
+        content: Text(
+          'عملگر «$name» برای ECU فعلی '
+          'هنوز فرمان معتبر و تأییدشده ندارد.\n\n'
+          'برای جلوگیری از ارسال فرمان اشتباه '
+          'به ECU، عملیات متوقف شد.',
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(
+                context,
+                true,
+              );
+            },
+            child: const Text(
+              'متوجه شدم',
+            ),
+          ),
+        ],
+      );
+    },
+  );
+
+  if (confirmed == true) {
+    return;
+  }
+}
+
+/* ============================================================
+   DEMO MODE
+   ============================================================ */
+
+void _toggleDemoMode() {
+  setState(() {
+    _demoMode = !_demoMode;
   });
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF10141E),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: glowColor.withOpacity(0.3), width: 1.5),
-        boxShadow: [
-          BoxShadow(color: glowColor.withOpacity(0.08), blurRadius: 20, spreadRadius: 2),
-        ],
-      ),
-      child: Column(
-        children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-          const SizedBox(height: 14),
-          SizedBox(
-            width: 120,
-            height: 120,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                CustomPaint(
-                  size: const Size(120, 120),
-                  painter: _GaugePainter(progress: progress, color: glowColor),
-                ),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      value,
-                      style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: glowColor),
-                    ),
-                    Text(unit, style: const TextStyle(fontSize: 10, color: Colors.white54)),
-                  ],
-                )
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+  if (_demoMode) {
+    _liveData = LiveData()
+      ..rpm = 850
+      ..speed = 0
+      ..coolant = 86
+      ..throttle = 7
+      ..engineLoad = 18
+      ..intakeAir = 32
+      ..oxygen = 0.72
+      ..battery = 13.9;
+
+    _ecuModel =
+        'DEMO ECU - RASA DIAG';
+
+    _protocolInfo =
+        'DEMO / OBD-II';
+
+    _vin =
+        'DEMO-VIN-000000000';
+
+    _ecuSoftware =
+        'DEMO SOFTWARE 1.0';
+  } else {
+    _liveData = LiveData();
+
+    _ecuModel =
+        'شناسایی نشده';
+
+    _protocolInfo = '-';
+
+    _vin =
+        'نامشخص';
+
+    _ecuSoftware =
+        'نامشخص';
   }
 }
 
-class _GaugePainter extends CustomPainter {
-  final double progress;
-  final Color color;
+/* ============================================================
+   TERMINAL
+   ============================================================ */
 
-  _GaugePainter({required this.progress, required this.color});
+Future<void> _sendTerminalCommand() async {
+  final command =
+      _terminalController.text.trim();
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2 - 8;
-
-    final bgPaint = Paint()
-      ..color = Colors.white10
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 9
-      ..strokeCap = StrokeCap.round;
-
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      pi * 0.75,
-      pi * 1.5,
-      false,
-      bgPaint,
-    );
-
-    final valPaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 9
-      ..strokeCap = StrokeCap.round;
-
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      pi * 0.75,
-      (pi * 1.5) * progress,
-      false,
-      valPaint,
-    );
+  if (command.isEmpty) {
+    return;
   }
 
-  @override
-  bool shouldRepaint(covariant _GaugePainter oldDelegate) =>
-      oldDelegate.progress != progress || oldDelegate.color != color;
+  _terminalController.clear();
+
+  if (!_connected) {
+    _showMessage(
+      'آداپتور متصل نیست.',
+    );
+    return;
+  }
+
+  await _sendRaw(
+    command,
+  );
+
+  if (mounted) {
+    setState(() {});
+  }
+}
+
+/* ============================================================
+   MESSAGE
+   ============================================================ */
+
+void _showMessage(
+  String message,
+) {
+  if (!mounted) return;
+
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration:
+            const Duration(seconds: 2),
+      ),
+    );
 }
