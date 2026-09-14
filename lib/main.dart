@@ -46,7 +46,7 @@ class RasaApp extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// ۱. صفحه فعال‌سازی و لایسنسینگ مدرن Rasa
+// ۱. صفحه فعال‌سازی و لایسنسینگ Rasa
 // ---------------------------------------------------------------------------
 class RasaLicenseGatekeeper extends StatefulWidget {
   const RasaLicenseGatekeeper({super.key});
@@ -215,7 +215,7 @@ class _RasaLicenseGatekeeperState extends State<RasaLicenseGatekeeper> {
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: 8, color: Color(0xFF00F0FF)),
               ),
               const SizedBox(height: 6),
-              const Text('سامانه دیاگ و تله‌متری هوشمند خودرو', style: TextStyle(color: Colors.grey, fontSize: 13)),
+              const Text('سامانه دیاگ و تله‌متری جامع خودروهای ایرانی و چینی', style: TextStyle(color: Colors.grey, fontSize: 13)),
               const SizedBox(height: 32),
               Container(
                 padding: const EdgeInsets.all(20),
@@ -289,7 +289,7 @@ class _RasaLicenseGatekeeperState extends State<RasaLicenseGatekeeper> {
 }
 
 // ---------------------------------------------------------------------------
-// ۲. داشبورد اصلی RASA با گیج‌های گرافیکی نئونی و محاسبه کارکرد
+// ۲. داشبورد اصلی RASA با پایش پارامترها و سنسورها
 // ---------------------------------------------------------------------------
 final Map<String, String> dtcDescriptions = {
   'P0100': 'ایراد در سنسور جریان جرم هوا (MAF)',
@@ -323,7 +323,9 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
   bool _isConnected = false;
   bool _isConnecting = false;
   bool _isDemoMode = false;
-  bool _isActuatorRunning = false;
+
+  String? _activeActuatorName;
+
   Timer? _pollingTimer;
   Timer? _demoTimer;
   String _serialBuffer = '';
@@ -335,7 +337,8 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
   int _throttle = 0;
   int _engineLoad = 0;
   int _intakeAirTemp = 0;
-  int _odometer = 0; // کیلومتر کارکرد واقعی خودرو
+  int _odometer = 0;
+  double _o2SensorVoltage = 0.0;
 
   final List<String> _dtcList = [];
   bool _isLoadingDTC = false;
@@ -396,6 +399,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
                   _voltage = (data['voltage'] as num?)?.toDouble() ?? _voltage;
                   _throttle = data['throttle'] ?? _throttle;
                   _odometer = data['odometer'] ?? _odometer;
+                  _o2SensorVoltage = (data['o2'] as num?)?.toDouble() ?? _o2SensorVoltage;
                 });
               } else if (data['type'] == 'dtc_response') {
                 setState(() {
@@ -428,6 +432,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
             'voltage': _voltage,
             'throttle': _throttle,
             'odometer': _odometer,
+            'o2': _o2SensorVoltage,
           });
           _wsChannel?.sink.add(packet);
         });
@@ -538,15 +543,20 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
 
       connection.input!.listen(_onDataReceived).onDone(_disconnect);
 
+      // مقداردهی اولیه بهینه برای خودروهای ایرانی و چینی
       await Future.delayed(const Duration(milliseconds: 300));
       _sendRaw('ATZ\r');
       await Future.delayed(const Duration(milliseconds: 300));
       _sendRaw('ATE0\r');
       await Future.delayed(const Duration(milliseconds: 200));
-      _sendRaw('ATSP0\r');
+      _sendRaw('ATH0\r');
+      await Future.delayed(const Duration(milliseconds: 200));
+      _sendRaw('ATAT1\r'); // Adaptive Timing
+      await Future.delayed(const Duration(milliseconds: 200));
+      _sendRaw('ATSP0\r'); // تشخیص اتوماتیک پروتکل (CAN یا K-Line)
 
       _startLivePolling();
-      _showSnack('متصل به پورت OBD2 خودرو.');
+      _showSnack('متصل به درگاه عیب‌یابی خودرو.');
     } catch (e) {
       setState(() => _isConnecting = false);
       _showSnack('خطا در اتصال: $e');
@@ -588,11 +598,13 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
 
     String clean = resp.replaceAll(RegExp(r'\s+'), '').toUpperCase();
 
+    // ۱. ولتاژ باتری و دینام
     if (resp.contains('V') && double.tryParse(resp.replaceAll('V', '').trim()) != null) {
       setState(() => _voltage = double.tryParse(resp.replaceAll('V', '').trim()) ?? _voltage);
       return;
     }
 
+    // ۲. پارس کردن سنسورهای عمومی (Mode 01)
     if (clean.contains('41')) {
       int idx = clean.indexOf('41');
       if (clean.length >= idx + 4) {
@@ -601,35 +613,42 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
 
         setState(() {
           switch (pid) {
-            case '0C':
+            case '0C': // دور موتور
               if (payload.length >= 4) {
                 int a = int.parse(payload.substring(0, 2), radix: 16);
                 int b = int.parse(payload.substring(2, 4), radix: 16);
                 _rpm = ((a * 256) + b) ~/ 4;
               }
               break;
-            case '0D':
+            case '0D': // سرعت خودرو
               if (payload.length >= 2) _speed = int.parse(payload.substring(0, 2), radix: 16);
               break;
-            case '05':
+            case '05': // دمای آب خنک‌کننده
               if (payload.length >= 2) _coolant = int.parse(payload.substring(0, 2), radix: 16) - 40;
               break;
-            case '11':
+            case '11': // زاویه دریچه گاز
               if (payload.length >= 2) _throttle = (int.parse(payload.substring(0, 2), radix: 16) * 100) ~/ 255;
               break;
-            case '04':
+            case '04': // بار موتور
               if (payload.length >= 2) _engineLoad = (int.parse(payload.substring(0, 2), radix: 16) * 100) ~/ 255;
               break;
-            case '0F':
+            case '0F': // دمای هوای منیفولد
               if (payload.length >= 2) _intakeAirTemp = int.parse(payload.substring(0, 2), radix: 16) - 40;
               break;
-            case 'A6': // خواندن کیلومتر کارکرد استاندارد OBD-II
+            case '14': // سنسور اکسیژن بالا (0 الی 1.275V)
+              if (payload.length >= 2) {
+                int a = int.parse(payload.substring(0, 2), radix: 16);
+                _o2SensorVoltage = a / 200.0;
+              }
+              break;
+            case 'A6': // کارکرد استاندارد جهانی OBD-II
               if (payload.length >= 8) {
                 int a = int.parse(payload.substring(0, 2), radix: 16);
                 int b = int.parse(payload.substring(2, 4), radix: 16);
                 int c = int.parse(payload.substring(4, 6), radix: 16);
                 int d = int.parse(payload.substring(6, 8), radix: 16);
-                _odometer = ((a * 16777216) + (b * 65536) + (c * 256) + d) ~/ 10;
+                int val = ((a * 16777216) + (b * 65536) + (c * 256) + d) ~/ 10;
+                if (val > 0) _odometer = val;
               }
               break;
           }
@@ -637,21 +656,26 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       }
     }
 
-    // خواندن کیلومتر ایسیوهای فرانسوی/ایرانی با سرویس 0x21
-    if (clean.contains('6101')) {
-      int idx = clean.indexOf('6101');
-      String payload = clean.substring(idx + 4);
-      if (payload.length >= 6) {
-        int a = int.parse(payload.substring(0, 2), radix: 16);
-        int b = int.parse(payload.substring(2, 4), radix: 16);
-        int c = int.parse(payload.substring(4, 6), radix: 16);
-        int odoVal = (a * 65536) + (b * 256) + c;
-        if (odoVal > 0) {
-          setState(() => _odometer = odoVal);
+    // ۳. پارس کردن کیلومتر خودروهای ایرانی و چینی (UDS / KWP - Service 21 & 22)
+    final List<String> odoHeaders = ['6101', '62F190', '620202', '622002', '620101'];
+    for (String hdr in odoHeaders) {
+      if (clean.contains(hdr)) {
+        int offset = clean.indexOf(hdr) + hdr.length;
+        String payload = clean.substring(offset);
+        if (payload.length >= 6) {
+          int a = int.parse(payload.substring(0, 2), radix: 16);
+          int b = int.parse(payload.substring(2, 4), radix: 16);
+          int c = int.parse(payload.substring(4, 6), radix: 16);
+          int odo = (a * 65536) + (b * 256) + c;
+          if (odo > 500 && odo < 2500000) {
+            setState(() => _odometer = odo);
+            break;
+          }
         }
       }
     }
 
+    // ۴. پارس کردن کدهای خطای ایسیو (Mode 03)
     if (clean.contains('43')) {
       int idx = clean.indexOf('43');
       String dtcBytes = clean.substring(idx + 2);
@@ -674,12 +698,12 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
   }
 
   void _startLivePolling() {
-    if (_isActuatorRunning) return;
+    if (_activeActuatorName != null) return;
     _pollingTimer?.cancel();
     int step = 0;
-    _pollingTimer = Timer.periodic(const Duration(milliseconds: 140), (t) {
-      if (!_isConnected || _isActuatorRunning) return;
-      switch (step % 7) {
+    _pollingTimer = Timer.periodic(const Duration(milliseconds: 130), (t) {
+      if (!_isConnected || _activeActuatorName != null) return;
+      switch (step % 9) {
         case 0:
           _sendRaw('010C\r'); // RPM
           break;
@@ -693,53 +717,77 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
           _sendRaw('0111\r'); // Throttle
           break;
         case 4:
-          _sendRaw('ATRV\r'); // Voltage
+          _sendRaw('0114\r'); // Oxygen Sensor
           break;
         case 5:
-          _sendRaw('01A6\r'); // Odometer Mode 01
+          _sendRaw('ATRV\r'); // Battery Voltage
           break;
         case 6:
-          _sendRaw('2101\r'); // Odometer Mode 21
+          if (_odometer == 0) _sendRaw('01A6\r'); // Standard OBD ODO
+          break;
+        case 7:
+          if (_odometer == 0) _sendRaw('2101\r'); // Iranian KWP ODO
+          break;
+        case 8:
+          if (_odometer == 0) _sendRaw('22F190\r'); // Chinese UDS CAN ODO
           break;
       }
       step++;
     });
   }
 
-  Future<void> _executeActuatorTest(String command, String name) async {
+  // متد جامع تست عملگرها سازگار با هر دو شبکه CAN و K-Line
+  Future<void> _executeSmartActuatorTest(List<String> candidates, String name) async {
     if (!_isConnected && !_isDemoMode) {
       _showSnack('ابتدا دانگل بلوتوث را متصل کنید.');
       return;
     }
 
     if (_isDemoMode) {
-      _showSnack('تست شبیه‌ساز: $name با موفقیت فعال شد.');
+      setState(() => _activeActuatorName = name);
+      _showSnack('تست شبیه‌ساز: $name فعال شد.');
+      await Future.delayed(const Duration(seconds: 2));
+      setState(() => _activeActuatorName = null);
       return;
     }
 
-    setState(() => _isActuatorRunning = true);
+    setState(() => _activeActuatorName = name);
     _pollingTimer?.cancel();
-    _showSnack('در حال آماده‌سازی و ارسال تست: $name');
+    _showSnack('در حال ارسال دستور تست به ایسیو: $name');
 
     try {
+      // ۱. ارسال هدر استاندارد ایسیو موتور (سازگار با خودروهای چینی و ایرانی شبکه CAN)
       _sendRaw('ATSH 7E0\r');
+      await Future.delayed(const Duration(milliseconds: 80));
+
+      // ۲. تلاش برای ورود به سشن‌های عیب‌یابی (UDS / KWP / ISO)
+      _sendRaw('1003\r'); // Extended UDS Session (چینی‌ها و بوش)
       await Future.delayed(const Duration(milliseconds: 100));
+      _sendRaw('10C0\r'); // Siemens KWP Session (ایرانی‌ها)
+      await Future.delayed(const Duration(milliseconds: 100));
+      _sendRaw('1081\r'); // Sagem / Valeo
+      await Future.delayed(const Duration(milliseconds: 120));
 
-      _sendRaw('1003\r');
-      await Future.delayed(const Duration(milliseconds: 150));
+      // ۳. ارسال پکت‌های دستوری کاندید برای کنترل قطعه
+      for (String cmd in candidates) {
+        _sendRaw('$cmd\r');
+        await Future.delayed(const Duration(milliseconds: 220));
+      }
 
-      _sendRaw('$command\r');
-      await Future.delayed(const Duration(milliseconds: 1200));
+      // ۴. زنده نگه‌داشتن سشن (Tester Present)
+      _sendRaw('3E00\r');
+      await Future.delayed(const Duration(milliseconds: 1000));
 
+      // ۵. بستن سشن و بازگردانی هدر عمومی
       _sendRaw('1001\r');
-      await Future.delayed(const Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 80));
       _sendRaw('ATSH 7DF\r');
 
-      _showSnack('دستور تست عملگر $name به ایسیو ارسال گردید.');
+      _showSnack('دستور تست عملگر $name به خودرو ارسال گردید.');
     } catch (e) {
-      _showSnack('خطا در ارسال تست: $e');
+      _showSnack('خطا در اجرای تست: $e');
     } finally {
-      setState(() => _isActuatorRunning = false);
+      setState(() => _activeActuatorName = null);
       _startLivePolling();
     }
   }
@@ -760,7 +808,8 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
           _throttle = (_speed ~/ 2.2).clamp(0, 100);
           _engineLoad = (_speed ~/ 2.5 + 15).clamp(15, 95);
           _intakeAirTemp = 32;
-          _odometer = 124580;
+          _odometer = 142380;
+          _o2SensorVoltage = 0.45 + (rnd.nextDouble() * 0.4 - 0.2);
         });
       });
       _showSnack('شبیه‌ساز فعال شد.');
@@ -846,7 +895,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     );
   }
 
-  // ۱. داشبورد با نمایش گیج‌ها و کارت کارکرد خودرو (Odometer)
+  // ۱. داشبورد با نمایش گیج‌ها، سنسور اکسیژن و کیلومتر
   Widget _buildCockpitDashboard() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -885,11 +934,39 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
               Expanded(child: _buildTelemetryCard('ولتاژ دینام', '${_voltage.toStringAsFixed(1)} V', Icons.bolt_rounded, const Color(0xFFFFD600))),
             ],
           ),
-          const SizedBox(height: 16),
-          // نمایش کیلومتر کارکرد واقعی خودرو
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF10141E),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFF00E676).withOpacity(0.3)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.air_rounded, color: Color(0xFF00E676), size: 22),
+                    SizedBox(width: 10),
+                    Text('ولتاژ سنسور اکسیژن (O2 Sensor):', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                  ],
+                ),
+                Text(
+                  '${_o2SensorVoltage.toStringAsFixed(3)} V',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: _o2SensorVoltage > 0.45 ? const Color(0xFF00E676) : const Color(0xFFFF9100),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: const Color(0xFF10141E),
               borderRadius: BorderRadius.circular(16),
@@ -912,7 +989,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
@@ -1086,6 +1163,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
   // ۳. تب سنسورها
   Widget _buildSensorsListTab() {
     final sensors = [
+      {'name': 'ولتاژ سنسور اکسیژن (O2 Sensor)', 'val': '${_o2SensorVoltage.toStringAsFixed(3)} V', 'icon': Icons.air_rounded},
       {'name': 'کیلومتر کارکرد خودرو (Odometer)', 'val': '$_odometer KM', 'icon': Icons.add_road_rounded},
       {'name': 'دور موتور (Engine RPM)', 'val': '$_rpm RPM', 'icon': Icons.speed_rounded},
       {'name': 'سرعت لحظه‌ای (Vehicle Speed)', 'val': '$_speed km/h', 'icon': Icons.directions_car_rounded},
@@ -1200,47 +1278,88 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     );
   }
 
-  // ۵. تب عملگرها
+  // ۵. تب عملگرها با پوشش جامع دستورات چینی و ایرانی
   Widget _buildActuatorsTab() {
     final actuators = [
-      {'name': 'فن خنک‌کننده (دور کند)', 'icon': Icons.toys_rounded, 'cmd': '2F010103'},
-      {'name': 'فن خنک‌کننده (دور تند)', 'icon': Icons.toys_rounded, 'cmd': '2F010203'},
-      {'name': 'رله پمپ بنزین / دوبل', 'icon': Icons.local_gas_station_rounded, 'cmd': '2F020103'},
-      {'name': 'شیر برقی کنیستر', 'icon': Icons.filter_alt_rounded, 'cmd': '2F040103'},
-      {'name': 'چراغ چک پشت آمپر (MIL)', 'icon': Icons.warning_rounded, 'cmd': '2F050103'},
+      {
+        'name': 'فن خنک‌کننده (دور کند)',
+        'icon': Icons.toys_rounded,
+        'candidates': ['2F01010301', '30010007', '300101', '310101', '2F100103'],
+      },
+      {
+        'name': 'فن خنک‌کننده (دور تند)',
+        'icon': Icons.toys_rounded,
+        'candidates': ['2F01020301', '30010008', '300102', '310102', '2F100203'],
+      },
+      {
+        'name': 'رله پمپ بنزین / دوبل',
+        'icon': Icons.local_gas_station_rounded,
+        'candidates': ['2F02010301', '30020001', '300201', '310201', '2F100303'],
+      },
+      {
+        'name': 'شیر برقی کنیستر',
+        'icon': Icons.filter_alt_rounded,
+        'candidates': ['2F04010301', '30040001', '300401', '310401', '2F100403'],
+      },
+      {
+        'name': 'چراغ چک پشت آمپر (MIL)',
+        'icon': Icons.warning_rounded,
+        'candidates': ['2F05010301', '30050001', '300501', '310501', '2F100503'],
+      },
     ];
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: actuators.length,
-      itemBuilder: (ctx, i) => Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: const Color(0xFF10141E),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white10),
-        ),
-        child: ListTile(
-          leading: Icon(actuators[i]['icon'] as IconData, color: const Color(0xFF00F0FF)),
-          title: Text(actuators[i]['name'] as String, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-          trailing: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _isActuatorRunning ? Colors.grey : const Color(0xFF00E676),
-              foregroundColor: Colors.black,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            onPressed: () {
-              if (!_isActuatorRunning) {
-                _executeActuatorTest(actuators[i]['cmd'] as String, actuators[i]['name'] as String);
-              }
-            },
-            child: Text(
-              _isActuatorRunning ? 'درحال تست...' : 'تست فعال‌سازی',
-              style: const TextStyle(fontWeight: FontWeight.bold),
+      itemBuilder: (ctx, i) {
+        final item = actuators[i];
+        final String actName = item['name'] as String;
+        final bool isThisRunning = _activeActuatorName == actName;
+        final bool isAnyOtherRunning = _activeActuatorName != null && !isThisRunning;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF10141E),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isThisRunning ? const Color(0xFF00F0FF) : Colors.white10,
+              width: isThisRunning ? 1.5 : 1.0,
             ),
           ),
-        ),
-      ),
+          child: ListTile(
+            leading: Icon(item['icon'] as IconData, color: isThisRunning ? const Color(0xFF00E676) : const Color(0xFF00F0FF)),
+            title: Text(actName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+            trailing: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isThisRunning
+                    ? const Color(0xFFFFD600)
+                    : (isAnyOtherRunning ? Colors.grey[800] : const Color(0xFF00E676)),
+                foregroundColor: Colors.black,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: isAnyOtherRunning || isThisRunning
+                  ? null
+                  : () {
+                      _executeSmartActuatorTest(
+                        item['candidates'] as List<String>,
+                        actName,
+                      );
+                    },
+              child: isThisRunning
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                    )
+                  : const Text(
+                      'تست فعال‌سازی',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+            ),
+          ),
+        );
+      },
     );
   }
 
