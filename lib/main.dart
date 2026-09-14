@@ -289,7 +289,7 @@ class _RasaLicenseGatekeeperState extends State<RasaLicenseGatekeeper> {
 }
 
 // ---------------------------------------------------------------------------
-// ۲. داشبورد اصلی RASA با گیج‌های گرافیکی نئونی
+// ۲. داشبورد اصلی RASA با گیج‌های گرافیکی نئونی و محاسبه کارکرد
 // ---------------------------------------------------------------------------
 final Map<String, String> dtcDescriptions = {
   'P0100': 'ایراد در سنسور جریان جرم هوا (MAF)',
@@ -335,6 +335,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
   int _throttle = 0;
   int _engineLoad = 0;
   int _intakeAirTemp = 0;
+  int _odometer = 0; // کیلومتر کارکرد واقعی خودرو
 
   final List<String> _dtcList = [];
   bool _isLoadingDTC = false;
@@ -394,6 +395,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
                   _coolant = data['coolant'] ?? _coolant;
                   _voltage = (data['voltage'] as num?)?.toDouble() ?? _voltage;
                   _throttle = data['throttle'] ?? _throttle;
+                  _odometer = data['odometer'] ?? _odometer;
                 });
               } else if (data['type'] == 'dtc_response') {
                 setState(() {
@@ -425,6 +427,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
             'coolant': _coolant,
             'voltage': _voltage,
             'throttle': _throttle,
+            'odometer': _odometer,
           });
           _wsChannel?.sink.add(packet);
         });
@@ -476,7 +479,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       builder: (ctx) => Container(
         padding: const EdgeInsets.all(20),
         child: Column(
-          mainAxisSize: dynamic,
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
             const Text(
@@ -620,10 +623,35 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
             case '0F':
               if (payload.length >= 2) _intakeAirTemp = int.parse(payload.substring(0, 2), radix: 16) - 40;
               break;
+            case 'A6': // خواندن کیلومتر کارکرد استاندارد OBD-II
+              if (payload.length >= 8) {
+                int a = int.parse(payload.substring(0, 2), radix: 16);
+                int b = int.parse(payload.substring(2, 4), radix: 16);
+                int c = int.parse(payload.substring(4, 6), radix: 16);
+                int d = int.parse(payload.substring(6, 8), radix: 16);
+                _odometer = ((a * 16777216) + (b * 65536) + (c * 256) + d) ~/ 10;
+              }
+              break;
           }
         });
       }
     }
+
+    // خواندن کیلومتر ایسیوهای فرانسوی/ایرانی با سرویس 0x21
+    if (clean.contains('6101')) {
+      int idx = clean.indexOf('6101');
+      String payload = clean.substring(idx + 4);
+      if (payload.length >= 6) {
+        int a = int.parse(payload.substring(0, 2), radix: 16);
+        int b = int.parse(payload.substring(2, 4), radix: 16);
+        int c = int.parse(payload.substring(4, 6), radix: 16);
+        int odoVal = (a * 65536) + (b * 256) + c;
+        if (odoVal > 0) {
+          setState(() => _odometer = odoVal);
+        }
+      }
+    }
+
     if (clean.contains('43')) {
       int idx = clean.indexOf('43');
       String dtcBytes = clean.substring(idx + 2);
@@ -651,21 +679,27 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     int step = 0;
     _pollingTimer = Timer.periodic(const Duration(milliseconds: 140), (t) {
       if (!_isConnected || _isActuatorRunning) return;
-      switch (step % 5) {
+      switch (step % 7) {
         case 0:
-          _sendRaw('010C\r');
+          _sendRaw('010C\r'); // RPM
           break;
         case 1:
-          _sendRaw('010D\r');
+          _sendRaw('010D\r'); // Speed
           break;
         case 2:
-          _sendRaw('0105\r');
+          _sendRaw('0105\r'); // Coolant
           break;
         case 3:
-          _sendRaw('0111\r');
+          _sendRaw('0111\r'); // Throttle
           break;
         case 4:
-          _sendRaw('ATRV\r');
+          _sendRaw('ATRV\r'); // Voltage
+          break;
+        case 5:
+          _sendRaw('01A6\r'); // Odometer Mode 01
+          break;
+        case 6:
+          _sendRaw('2101\r'); // Odometer Mode 21
           break;
       }
       step++;
@@ -726,6 +760,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
           _throttle = (_speed ~/ 2.2).clamp(0, 100);
           _engineLoad = (_speed ~/ 2.5 + 15).clamp(15, 95);
           _intakeAirTemp = 32;
+          _odometer = 124580;
         });
       });
       _showSnack('شبیه‌ساز فعال شد.');
@@ -811,6 +846,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     );
   }
 
+  // ۱. داشبورد با نمایش گیج‌ها و کارت کارکرد خودرو (Odometer)
   Widget _buildCockpitDashboard() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -848,6 +884,33 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
               const SizedBox(width: 8),
               Expanded(child: _buildTelemetryCard('ولتاژ دینام', '${_voltage.toStringAsFixed(1)} V', Icons.bolt_rounded, const Color(0xFFFFD600))),
             ],
+          ),
+          const SizedBox(height: 16),
+          // نمایش کیلومتر کارکرد واقعی خودرو
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: const Color(0xFF10141E),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFF00F0FF).withOpacity(0.3)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.add_road_rounded, color: Color(0xFF00F0FF), size: 22),
+                    SizedBox(width: 10),
+                    Text('کارکرد واقعی خودرو (ایسیو):', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                  ],
+                ),
+                Text(
+                  _odometer > 0 ? '$_odometer KM' : 'در حال استعلام...',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF00F0FF), letterSpacing: 1),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 16),
           Container(
@@ -907,6 +970,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     );
   }
 
+  // ۲. تب ریموت ابری
   Widget _buildRemoteSupportTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -1019,8 +1083,10 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     );
   }
 
+  // ۳. تب سنسورها
   Widget _buildSensorsListTab() {
     final sensors = [
+      {'name': 'کیلومتر کارکرد خودرو (Odometer)', 'val': '$_odometer KM', 'icon': Icons.add_road_rounded},
       {'name': 'دور موتور (Engine RPM)', 'val': '$_rpm RPM', 'icon': Icons.speed_rounded},
       {'name': 'سرعت لحظه‌ای (Vehicle Speed)', 'val': '$_speed km/h', 'icon': Icons.directions_car_rounded},
       {'name': 'دمای آب موتور (Coolant Temp)', 'val': '$_coolant °C', 'icon': Icons.thermostat_rounded},
@@ -1054,6 +1120,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     );
   }
 
+  // ۴. تب کدهای خطا
   Widget _buildDtcTab() {
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -1133,6 +1200,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     );
   }
 
+  // ۵. تب عملگرها
   Widget _buildActuatorsTab() {
     final actuators = [
       {'name': 'فن خنک‌کننده (دور کند)', 'icon': Icons.toys_rounded, 'cmd': '2F010103'},
@@ -1176,6 +1244,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     );
   }
 
+  // ۶. ترمینال مانیتورینگ
   Widget _buildTerminalTab() {
     final textController = TextEditingController();
     return Container(
