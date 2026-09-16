@@ -11,8 +11,6 @@ import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-enum _RemoteRole { technician, support }
-
 class _RasaCustomization {
   final String workshopName;
   final String technicianName;
@@ -22,13 +20,6 @@ class _RasaCustomization {
   const _RasaCustomization({this.workshopName='', this.technicianName='', this.phone='', this.accentHex='00F0FF', this.compactMode=false});
   Map<String,dynamic> toJson()=>{'workshopName':workshopName,'technicianName':technicianName,'phone':phone,'accentHex':accentHex,'compactMode':compactMode};
   static _RasaCustomization fromJson(Map<String,dynamic> j)=>_RasaCustomization(workshopName:'${j['workshopName']??''}',technicianName:'${j['technicianName']??''}',phone:'${j['phone']??''}',accentHex:'${j['accentHex']??'00F0FF'}',compactMode:j['compactMode']==true);
-}
-
-class _RemoteSession {
-  final String id;
-  final _RemoteRole role;
-  final String token;
-  const _RemoteSession(this.id,this.role,this.token);
 }
 
 void main() {
@@ -633,13 +624,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
   final Map<String, String> _actuatorEvidence = {};
 
   final _terminalController = TextEditingController();
-  final _remoteUrlController = TextEditingController();
-  final _remoteSessionController = TextEditingController();
-  final _remoteTokenController = TextEditingController();
-  final _supportCodeController = TextEditingController();
   final _supportSessionCodeController = TextEditingController();
-  final _adminTokenController = TextEditingController();
-  final _supportNameController = TextEditingController();
   final _workshopController = TextEditingController();
   final _technicianController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -649,10 +634,9 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
   Timer? _remoteHeartbeat;
   bool _remoteConnected = false;
   bool _remoteConnecting = false;
-  String _remoteStatus = 'قطع';
-  String _remoteRoleLabel = 'تکنسین';
-  String _remoteSessionId = '';
-  String _remoteToken = '';
+  String _remoteStatus = 'قطع ارتباط';
+  String _remoteRoleLabel = 'انتخاب نشده';
+  String _customerSessionCode = '';
   _RasaCustomization _custom = const _RasaCustomization();
   Color _accent = const Color(0xFF00F0FF);
 
@@ -1798,13 +1782,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     _connection?.dispose();
     _tabs.dispose();
     _terminalController.dispose();
-    _remoteUrlController.dispose();
-    _remoteSessionController.dispose();
-    _remoteTokenController.dispose();
-    _supportCodeController.dispose();
     _supportSessionCodeController.dispose();
-    _adminTokenController.dispose();
-    _supportNameController.dispose();
     _workshopController.dispose();
     _technicianController.dispose();
     _phoneController.dispose();
@@ -1832,102 +1810,107 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     _snack('شخصی‌سازی ذخیره شد');
   }
 
-  String _newToken(){
-    final r=Random.secure();
-    const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    return List.generate(24,(_)=>chars[r.nextInt(chars.length)]).join();
-  }
-
   String _newSixDigitCode(){
     final r=Random.secure();
     return (100000+r.nextInt(900000)).toString();
   }
 
-  Future<void> _remoteCreateSession() async {
-    final id='RASA-${DateTime.now().millisecondsSinceEpoch.toRadixString(36).toUpperCase()}';
-    final token=_newToken();
-    final code=_newSixDigitCode();
-    _remoteSessionId=id; _remoteToken=token;
-    _remoteSessionController.text=id; _remoteTokenController.text=token;
-    _supportSessionCodeController.text=code;
-    if(mounted) setState((){});
-  }
-
-  Future<void> _requestRemoteSupport() async {
-    if (!_connected) { _snack('ابتدا دانگل دیاگ را به خودرو متصل کنید.'); return; }
-    await _remoteCreateSession();
-    await _remoteConnect(role: _RemoteRole.technician);
-  }
-
-  Future<void> _remoteConnect({_RemoteRole role=_RemoteRole.technician}) async {
-    if(_remoteConnecting||_remoteConnected) return;
-    final url=_remoteUrlController.text.trim();
-    if(!url.startsWith('ws://')&&!url.startsWith('wss://')) { _snack('آدرس WebSocket باید با ws:// یا wss:// شروع شود'); return; }
-
-    String sid=_remoteSessionController.text.trim();
-    String tok=_remoteTokenController.text.trim();
-    final headers=<String,String>{'X-RASA-Role':role==_RemoteRole.technician?'technician':'support'};
-
-    if(role==_RemoteRole.technician){
-      if(sid.isEmpty||tok.isEmpty){
-        await _remoteCreateSession();
-        sid=_remoteSessionController.text.trim(); tok=_remoteTokenController.text.trim();
-      }
-      final code=_supportSessionCodeController.text.trim();
-      if(code.length!=6){_snack('ابتدا «جلسه جدید» را بزنید تا کد ۶ رقمی مشتری ساخته شود.');return;}
-      headers['X-RASA-Session']=sid;
-      headers['X-RASA-Session-Token']=tok;
-      headers['X-RASA-Session-Code']=code;
-    }else{
-      final supportCode=_supportCodeController.text.trim();
-      final customerCode=_supportSessionCodeController.text.trim();
-      if(supportCode.length!=6){_snack('کد اختصاصی پشتیبان باید ۶ رقمی باشد.');return;}
-      if(customerCode.length!=6){_snack('کد ۶ رقمی اتصال مشتری را وارد کنید.');return;}
-      headers['X-RASA-Support-Code']=supportCode;
-      headers['X-RASA-Session-Code']=customerCode;
+  // --- سیستم ریموت ساده‌شده بر پایه کد ۶ رقمی ---
+  Future<void> _startCustomerSession() async {
+    if (!_connected) {
+      _snack('ابتدا دانگل بلوتوث را به خودرو متصل کنید.');
+      return;
     }
+    await _remoteClose();
+    _customerSessionCode = _newSixDigitCode();
+    _remoteRoleLabel = 'مشتری (متصل به خودرو)';
 
-    setState(()=>_remoteConnecting=true);
-    try{
-      final ws=await WebSocket.connect(url,headers:headers).timeout(const Duration(seconds:10));
-      _remoteSocket=ws; _remoteConnected=true; _remoteRoleLabel=role==_RemoteRole.technician?'تکنسین':'پشتیبان'; _remoteStatus='متصل';
-      _remoteSub=ws.listen((data){_handleRemoteMessage(data.toString());},onDone:(){_remoteConnected=false;_remoteStatus='قطع';if(mounted)setState((){});},onError:(_){_remoteConnected=false;_remoteStatus='خطا';if(mounted)setState((){});});
-      ws.add(jsonEncode({'type':'hello','role':role==_RemoteRole.technician?'technician':'support','app':'RASA_DIAG','ts':DateTime.now().toIso8601String()}));
-      _remoteHeartbeat=Timer.periodic(const Duration(seconds:15),(_){ if(_remoteConnected) _remoteSocket?.add(jsonEncode({'type':'ping','ts':DateTime.now().millisecondsSinceEpoch})); });
-      _snack(role==_RemoteRole.support ? 'پشتیبان متصل شد و خودرو در دسترس است.' : 'سشن مشتری ساخته و ریموت آماده شد.');
-    }catch(e){_remoteStatus='خطا: ${e.toString()}';}
-    if(mounted)setState(()=>_remoteConnecting=false);
+    setState(() => _remoteConnecting = true);
+    const serverUrl = 'wss://api.rasadiag.ir/ws';
+
+    try {
+      final ws = await WebSocket.connect(
+        serverUrl,
+        headers: {
+          'X-RASA-Role': 'client',
+          'X-RASA-Code': _customerSessionCode,
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      _remoteSocket = ws;
+      _remoteConnected = true;
+      _remoteStatus = 'آماده اتصال پشتیبان';
+
+      _remoteSub = ws.listen((data) => _handleRemoteMessage(data.toString()), onDone: () {
+        if (mounted) setState(() { _remoteConnected = false; _remoteStatus = 'ارتباط قطع شد'; });
+      }, onError: (_) {
+        if (mounted) setState(() { _remoteConnected = false; _remoteStatus = 'خطای ارتباطی'; });
+      });
+
+      ws.add(jsonEncode({'type': 'register_client', 'code': _customerSessionCode}));
+      _remoteHeartbeat = Timer.periodic(const Duration(seconds: 15), (_) {
+        if (_remoteConnected) _remoteSocket?.add(jsonEncode({'type': 'ping'}));
+      });
+
+      _snack('کد ۶ رقمی ساخته شد. آن را برای پشتیبان ارسال کنید.');
+    } catch (e) {
+      _remoteStatus = 'خطا در اتصال به سرور: $e';
+    } finally {
+      if (mounted) setState(() => _remoteConnecting = false);
+    }
   }
 
-  Future<void> _supportAdminAction(String action) async {
-    final base=_remoteUrlController.text.trim().replaceFirst(RegExp(r'/ws/?$'),'');
-    final admin=_adminTokenController.text.trim();
-    if(!base.startsWith('http://')&&!base.startsWith('https://')){_snack('برای مدیریت اقساط، آدرس HTTP سرور را وارد کنید؛ مثال https://domain');return;}
-    if(admin.isEmpty){_snack('توکن مدیر فروش/مدیریت الزامی است.');return;}
-    if(action=='create'){
-      final name=_supportNameController.text.trim();
-      if(name.isEmpty){_snack('نام پشتیبان را وارد کنید.');return;}
-      final code=_newSixDigitCode();
-      try{
-        final req=await HttpClient().postUrl(Uri.parse('$base/api/admin/support/create'));
-        req.headers.set('Authorization','Bearer $admin'); req.headers.contentType=ContentType.json;
-        req.write(jsonEncode({'name':name,'code':code}));
-        final res=await req.close(); final body=await res.transform(utf8.decoder).join();
-        if(res.statusCode>=200&&res.statusCode<300){_supportCodeController.text=code;_snack('پشتیبان ساخته شد. کد اختصاصی: $code');}
-        else _snack('خطای سرور: $body');
-      }catch(e){_snack('خطا در مدیریت سرور: $e');}
-    }else{
-      final code=_supportCodeController.text.trim();
-      if(code.length!=6){_snack('کد پشتیبان ۶ رقمی را وارد کنید.');return;}
-      try{
-        final req=await HttpClient().postUrl(Uri.parse('$base/api/admin/support/$action'));
-        req.headers.set('Authorization','Bearer $admin'); req.headers.contentType=ContentType.json;
-        req.write(jsonEncode({'code':code}));
-        final res=await req.close(); final body=await res.transform(utf8.decoder).join();
-        if(res.statusCode>=200&&res.statusCode<300)_snack(action=='lock'?'پشتیبان قفل شد و دیگر نمی‌تواند ریموت بگیرد.':'پشتیبان فعال شد.');
-        else _snack('خطای سرور: $body');
-      }catch(e){_snack('خطا در مدیریت سرور: $e');}
+  Future<void> _connectAsExpert() async {
+    final code = _supportSessionCodeController.text.trim();
+    if (code.length != 6) {
+      _snack('لطفاً کد ۶ رقمی مشتری را دقیق وارد کنید.');
+      return;
     }
+    await _remoteClose();
+    _remoteRoleLabel = 'پشتیبان فنی';
+
+    setState(() => _remoteConnecting = true);
+    const serverUrl = 'wss://api.rasadiag.ir/ws';
+
+    try {
+      final ws = await WebSocket.connect(
+        serverUrl,
+        headers: {
+          'X-RASA-Role': 'expert',
+          'X-RASA-Code': code,
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      _remoteSocket = ws;
+      _remoteConnected = true;
+      _remoteStatus = 'متصل به خودروی مشتری ($code)';
+
+      _remoteSub = ws.listen((data) => _handleRemoteMessage(data.toString()), onDone: () {
+        if (mounted) setState(() { _remoteConnected = false; _remoteStatus = 'قطع ارتباط'; });
+      }, onError: (_) {
+        if (mounted) setState(() { _remoteConnected = false; _remoteStatus = 'خطای ارتباطی'; });
+      });
+
+      ws.add(jsonEncode({'type': 'join_expert', 'target_code': code}));
+      _remoteHeartbeat = Timer.periodic(const Duration(seconds: 15), (_) {
+        if (_remoteConnected) _remoteSocket?.add(jsonEncode({'type': 'ping'}));
+      });
+
+      _snack('با موفقیت به دیاگ مشتری متصل شدید!');
+    } catch (e) {
+      _remoteStatus = 'عدم اتصال به مشتری: $e';
+    } finally {
+      if (mounted) setState(() => _remoteConnecting = false);
+    }
+  }
+
+  void _sendRemoteDiagnostic(String cmd) {
+    if (!_remoteConnected) {
+      _snack('ارتباط با سرور یا دیاگ مشتری متصل نیست.');
+      return;
+    }
+    _remoteSend({'type': 'diagnostic_request', 'command': cmd});
+    _log('REMOTE SENT → $cmd');
   }
 
   void _handleRemoteMessage(String raw){
@@ -1963,64 +1946,191 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     _remoteSocket=null; _remoteConnected=false;
   }
 
-  Widget _remoteTab()=>ListView(padding:const EdgeInsets.all(14),children:[
-    Card(child:ListTile(leading:Icon(_remoteConnected?Icons.cloud_done:Icons.cloud_off,color:_remoteConnected?const Color(0xFF00E676):Colors.white54,size:32),title:const Text('ریموت واقعی RASA',style:TextStyle(fontWeight:FontWeight.w900)),subtitle:Text('$_remoteRoleLabel • $_remoteStatus'))),
-    Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      const Text('۱) سمت تکنسین / مشتری',style:TextStyle(fontSize:17,fontWeight:FontWeight.w900)),
-      const SizedBox(height:8),
-      TextField(controller:_remoteUrlController,decoration:const InputDecoration(labelText:'آدرس سرور ریموت',hintText:'wss://your-domain/ws')),
-      const SizedBox(height:8),
-      TextField(controller:_supportSessionCodeController,keyboardType:TextInputType.number,maxLength:6,decoration:const InputDecoration(labelText:'کد ۶ رقمی اتصال مشتری',helperText:'پس از ایجاد جلسه، همین کد را برای پشتیبان ارسال کنید.')),
-      const SizedBox(height:4),
-      Row(children:[Expanded(child:FilledButton.icon(onPressed:_remoteConnected?null:_requestRemoteSupport,icon:const Icon(Icons.support_agent),label:const Text('درخواست پشتیبانی'))),const SizedBox(width:8),Expanded(child:FilledButton.icon(onPressed:_remoteConnected?null:()=>_remoteConnect(role:_RemoteRole.technician),icon:const Icon(Icons.add_link),label:const Text('ساخت کد')))]),
-      if(_remoteSessionId.isNotEmpty) ...[
-        const SizedBox(height:8),Text('شناسه داخلی جلسه: $_remoteSessionId',style:const TextStyle(fontSize:11,color:Colors.white54)),
-        Text('کد قابل ارسال به پشتیبان: ${_supportSessionCodeController.text}',style:const TextStyle(fontSize:18,fontWeight:FontWeight.w900,color:Color(0xFF00E676))),
+  Widget _remoteTab() {
+    return ListView(
+      padding: const EdgeInsets.all(14),
+      children: [
+        Card(
+          color: _remoteConnected ? const Color(0xFF0C241B) : const Color(0xFF10141E),
+          child: ListTile(
+            leading: Icon(
+              _remoteConnected ? Icons.wifi_tethering_rounded : Icons.wifi_tethering_off_rounded,
+              color: _remoteConnected ? const Color(0xFF00E676) : Colors.white38,
+              size: 32,
+            ),
+            title: Text(
+              _remoteConnected ? 'اتصال ریموت فعال است' : 'مرکز پشتیبانی از راه دور',
+              style: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+            subtitle: Text('وضعیت: $_remoteStatus • نقش: $_remoteRoleLabel'),
+            trailing: _remoteConnected
+                ? OutlinedButton(
+                    onPressed: () { _remoteClose(); setState(() {}); },
+                    style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFFF2A55)),
+                    child: const Text('قطع'),
+                  )
+                : null,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.directions_car_filled_rounded, color: Color(0xFF00F0FF)),
+                    SizedBox(width: 8),
+                    Text('من پیش خودرو هستم (دریافت کمک)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text('اگر در محل خودرو هستید، کلید زیر را بزنید و کد ظاهر شده را برای کارشناس پشتیبان بخوانید:',
+                    style: TextStyle(color: Colors.white70, fontSize: 13)),
+                const SizedBox(height: 14),
+                if (_customerSessionCode.isNotEmpty && _remoteConnected) ...[
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0A1F18),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF00E676), width: 1.5),
+                    ),
+                    child: Column(
+                      children: [
+                        const Text('کد اتصال شما:', style: TextStyle(color: Colors.white60, fontSize: 12)),
+                        const SizedBox(height: 4),
+                        SelectableText(
+                          _customerSessionCode,
+                          style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Color(0xFF00E676), letterSpacing: 8),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+                FilledButton.icon(
+                  onPressed: _remoteConnecting || (_remoteConnected && _remoteRoleLabel.contains('مشتری'))
+                      ? null
+                      : _startCustomerSession,
+                  icon: const Icon(Icons.share_location_rounded),
+                  label: Text(_remoteConnecting ? 'در حال اتصال...' : 'دریافت کد اتصال ۶ رقمی'),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.support_agent_rounded, color: Color(0xFFFFD54F)),
+                    SizedBox(width: 8),
+                    Text('من پشتیبان هستم (اتصال به خودروی مشتری)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _supportSessionCodeController,
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 22, letterSpacing: 6, fontWeight: FontWeight.w900),
+                  decoration: const InputDecoration(
+                    labelText: 'کد ۶ رقمی مشتری را اینجا وارد کنید',
+                    hintText: 'مثلاً 482910',
+                    border: OutlineInputBorder(),
+                    counterText: '',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                FilledButton.icon(
+                  onPressed: _remoteConnecting || (_remoteConnected && _remoteRoleLabel.contains('پشتیبان'))
+                      ? null
+                      : _connectAsExpert,
+                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFFD54F), foregroundColor: Colors.black),
+                  icon: const Icon(Icons.login_rounded),
+                  label: const Text('اتصال مستقیم به خودرو'),
+                ),
+                if (_remoteConnected && _remoteRoleLabel.contains('پشتیبان')) ...[
+                  const Divider(height: 28),
+                  const Text('میز کار کنترل از راه دور:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ActionChip(
+                        avatar: const Icon(Icons.search, size: 18),
+                        label: const Text('خواندن خطا (DTC)'),
+                        onPressed: () => _sendRemoteDiagnostic('03'),
+                      ),
+                      ActionChip(
+                        avatar: const Icon(Icons.delete_sweep, size: 18),
+                        label: const Text('پاک‌سازی خطاها'),
+                        onPressed: () => _sendRemoteDiagnostic('04'),
+                      ),
+                      ActionChip(
+                        avatar: const Icon(Icons.fingerprint, size: 18),
+                        label: const Text('شماره VIN'),
+                        onPressed: () => _sendRemoteDiagnostic('0902'),
+                      ),
+                      ActionChip(
+                        avatar: const Icon(Icons.speed, size: 18),
+                        label: const Text('دور موتور لحظه‌ای'),
+                        onPressed: () => _sendRemoteDiagnostic('010C'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _terminalController,
+                          decoration: const InputDecoration(hintText: 'کد دلخواه (مثلاً 0105 یا 22F190)', isDense: true),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: () {
+                          final c = _terminalController.text.trim();
+                          if (c.isNotEmpty) {
+                            _sendRemoteDiagnostic(c);
+                            _terminalController.clear();
+                          }
+                        },
+                        icon: const Icon(Icons.send_rounded, color: Color(0xFF00F0FF)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  if (_remoteResults.isNotEmpty) ...[
+                    const Text('نتایج دریافتی از خودرو:', style: TextStyle(fontSize: 12, color: Colors.white60)),
+                    const SizedBox(height: 6),
+                    ..._remoteResults.reversed.take(6).map((res) => Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(bottom: 6),
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(8)),
+                          child: Text(res, style: const TextStyle(fontFamily: 'monospace', fontSize: 12, color: Color(0xFF00F0FF))),
+                        )),
+                  ],
+                ],
+              ],
+            ),
+          ),
+        ),
       ],
-    ]))),
-    Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      const Text('۲) سمت پشتیبان',style:TextStyle(fontSize:17,fontWeight:FontWeight.w900)),
-      const SizedBox(height:8),
-      TextField(controller:_supportCodeController,keyboardType:TextInputType.number,maxLength:6,decoration:const InputDecoration(labelText:'کد اختصاصی پشتیبان',helperText:'این کد هنگام فروش به هر پشتیبان اختصاص داده می‌شود.')),
-      TextField(controller:_supportSessionCodeController,keyboardType:TextInputType.number,maxLength:6,decoration:const InputDecoration(labelText:'کد ۶ رقمی مشتری')),
-      const SizedBox(height:8),
-      FilledButton.icon(onPressed:_remoteConnected?null:()=>_remoteConnect(role:_RemoteRole.support),icon:const Icon(Icons.support_agent),label:const Text('ورود پشتیبان و اتصال به خودرو')),
-      if(_remoteConnected && _remoteRoleLabel=='پشتیبان') ...[
-        const SizedBox(height:10),
-        TextField(controller:_terminalController,decoration:const InputDecoration(labelText:'فرمان تشخیصی برای ECU',hintText:'010C / 010D / 03 / 22F190')),
-        const SizedBox(height:8),
-        FilledButton.icon(onPressed:(){final c=_terminalController.text.trim();if(c.isNotEmpty){_remoteSend({'type':'diagnostic_request','command':c});_log('REMOTE → $c');}},icon:const Icon(Icons.send),label:const Text('ارسال فرمان به خودرو')),
-         if(_remoteResults.isNotEmpty) ...[
-           const SizedBox(height:12),
-           const Text('پاسخ ECU',style:TextStyle(fontWeight:FontWeight.w900)),
-           const SizedBox(height:6),
-           ..._remoteResults.reversed.take(12).map((r)=>Container(
-             width:double.infinity,margin:const EdgeInsets.only(bottom:6),padding:const EdgeInsets.all(10),
-             decoration:BoxDecoration(color:Colors.black26,borderRadius:BorderRadius.circular(10)),
-             child:Text(r,style:const TextStyle(fontFamily:'monospace',fontSize:12)),
-           )),
-         ],
-      ],
-    ]))),
-    Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      const Text('۳) مدیریت فروش و اقساط',style:TextStyle(fontSize:17,fontWeight:FontWeight.w900)),
-      const SizedBox(height:8),
-      const Text('کد اختصاصی هر پشتیبان روی سرور ثبت می‌شود. با قفل‌کردن حساب، پشتیبان دیگر حتی با داشتن کد مشتری نمی‌تواند به ریموت متصل شود.',style:TextStyle(color:Colors.white70)),
-      const SizedBox(height:10),
-      TextField(controller:_adminTokenController,obscureText:true,decoration:const InputDecoration(labelText:'توکن مدیر فروش')),
-      const SizedBox(height:8),
-      TextField(controller:_supportNameController,decoration:const InputDecoration(labelText:'نام پشتیبان برای ثبت فروش')),
-      const SizedBox(height:8),
-      TextField(controller:_supportCodeController,keyboardType:TextInputType.number,maxLength:6,decoration:const InputDecoration(labelText:'کد پشتیبان (برای قفل/فعال‌سازی)')),
-      Wrap(spacing:8,runSpacing:8,children:[
-        OutlinedButton.icon(onPressed:()=>_supportAdminAction('create'),icon:const Icon(Icons.person_add),label:const Text('ایجاد کد جدید')),
-        FilledButton.icon(onPressed:()=>_supportAdminAction('lock'),style:FilledButton.styleFrom(backgroundColor:const Color(0xFFFF2A55)),icon:const Icon(Icons.lock),label:const Text('قفل پشتیبان')),
-        OutlinedButton.icon(onPressed:()=>_supportAdminAction('unlock'),icon:const Icon(Icons.lock_open),label:const Text('فعال‌سازی مجدد')),
-      ]),
-    ]))),
-    Card(child:const Padding(padding:EdgeInsets.all(14),child:Text('معماری: تکنسین مستقیماً به ECU متصل است؛ پشتیبان فقط از طریق سرور مجاز به ارسال درخواست تشخیصی می‌شود. کد مشتری موقت و کد پشتیبان دائمی هستند و وضعیت اقساط روی سرور کنترل می‌شود.'))),
-    if(_remoteConnected) Padding(padding:const EdgeInsets.only(top:4),child:OutlinedButton.icon(onPressed:_remoteClose,icon:const Icon(Icons.link_off),label:const Text('قطع ریموت'))),
-  ]);
+    );
+  }
 
   Widget _customTab()=>ListView(padding:const EdgeInsets.all(14),children:[
     Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
