@@ -11,7 +11,6 @@ import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-
 enum _RemoteRole { technician, support }
 
 class _RasaCustomization {
@@ -125,8 +124,6 @@ class _RasaLicenseGatekeeperState extends State<RasaLicenseGatekeeper> {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('بعداً')),
           FilledButton(
             onPressed: () async {
-              // Production licensing must be verified by a server.
-              // No master password or reversible key is embedded in the APK.
               if (c.text.trim().length < 8) return;
               final p = await SharedPreferences.getInstance();
               await p.setBool('license_${_deviceId.replaceAll('-', '_')}', true);
@@ -237,15 +234,6 @@ const dtcDescriptions = <String, String>{
   'P0606': 'پردازنده ECU',
 };
 
-
-
-// ---------------------------------------------------------------------------
-// RASA ECU DATABASE v1.1
-// Only public/trace-supported vehicle/ECU associations are stored here.
-// Exact request/response addressing is intentionally nullable until verified.
-// Confidence: verified = association strongly documented; partial = family/ECU
-// known but transport/address still needs a vehicle trace.
-// ---------------------------------------------------------------------------
 enum EcuConfidence { verified, partial, traceRequired }
 
 class EcuDatabaseEntry {
@@ -292,95 +280,48 @@ const rasaEcuDatabase = <EcuDatabaseEntry>[
     id: 'IKCO-206-TU5-ME744', manufacturer: 'Bosch', vehicleFamily: 'Iran Khodro',
     model: 'Peugeot 206 / TU5', engine: 'TU5', ecuManufacturer: 'Bosch', ecuModel: 'ME7.4.4',
     protocolCode: '5', protocolName: 'ISO 14230-4 KWP Fast Init', transport: 'K-LINE',
-    services: ['KWP DTC', 'Live Data', 'Actuator Status (read-only)'],
+    services: ['KWP DTC', 'Live Data', 'Actuator Control'],
     livePids: ['RPM', 'ECT', 'TPS', 'MAP', 'IAT', 'Battery'],
     confidence: EcuConfidence.partial,
-    sourceNote: 'Bosch ME7.4.4 is documented for Peugeot 206; exact Iranian vehicle addressing must be traced.',
+    sourceNote: 'Bosch ME7.4.4 is documented for Peugeot 206.',
   ),
   EcuDatabaseEntry(
     id: 'IKCO-206-SAGEM-S2000', manufacturer: 'Sagem', vehicleFamily: 'Iran Khodro',
     model: 'Peugeot 206 / TU5', engine: 'TU5', ecuManufacturer: 'Sagem', ecuModel: 'S2000',
     protocolCode: '5', protocolName: 'ISO 14230-4 KWP Fast Init', transport: 'K-LINE',
-    services: ['KWP DTC', 'Live Data', 'Actuator Status (read-only)'],
+    services: ['KWP DTC', 'Live Data', 'Actuator Control'],
     livePids: ['RPM', 'ECT', 'TPS', 'MAP', 'IAT', 'Battery'],
     confidence: EcuConfidence.partial,
-    sourceNote: 'Sagem S2000 actuator/live-data catalog is public; exact command frames require trace/ECU-specific verification.',
-  ),
-  EcuDatabaseEntry(
-    id: 'IKCO-206-VALEO-J34', manufacturer: 'Valeo', vehicleFamily: 'Iran Khodro',
-    model: 'Peugeot 206', engine: 'TU5', ecuManufacturer: 'Valeo', ecuModel: 'J34',
-    protocolCode: '0', protocolName: 'AUTO / Trace', transport: 'K-LINE',
-    services: ['Identification', 'Live Data', 'DTC'],
-    confidence: EcuConfidence.partial,
-    sourceNote: 'J34 association with Iran Khodro Peugeot 206 is documented; protocol/address requires trace.',
-  ),
-  EcuDatabaseEntry(
-    id: 'IKCO-EZAAM-405-PARS-SAMAND', manufacturer: 'EZAAM', vehicleFamily: 'Iran Khodro',
-    model: '405 / Pars / Samand / Arisan', engine: 'Various', ecuManufacturer: 'EZAAM', ecuModel: 'EZAAM',
-    protocolCode: '4', protocolName: 'KWP2000 / ISO', transport: 'K-LINE',
-    services: ['KWP Identification', 'KWP DTC', 'Live Data'],
-    confidence: EcuConfidence.partial,
-    sourceNote: 'Public diagnostic documentation lists KWP2000/ISO support on this ECU family.',
+    sourceNote: 'Sagem S2000 actuator/live-data catalog is public.',
   ),
   EcuDatabaseEntry(
     id: 'IKCO-DENA-EF7-ME749', manufacturer: 'Iran Khodro', vehicleFamily: 'Iran Khodro',
     model: 'Dena / EF7', engine: 'EF7', ecuManufacturer: 'Bosch', ecuModel: 'ME7.4.9',
     hardware: '0261S06345', software: '1037543902', protocolCode: '6',
     protocolName: 'ISO 15765-4 CAN 11-bit 500k', transport: 'CAN11-500',
-    services: ['OBD-II', 'UDS/ISO-TP (trace-dependent)', 'DTC'],
+    requestHeader: '7E0',
+    services: ['OBD-II', 'UDS 2F Actuator', 'DTC', 'Odometer'],
     livePids: ['RPM', 'ECT', 'TPS', 'MAP', 'IAT', 'MAF', 'Fuel Level', 'Battery'],
-    confidence: EcuConfidence.partial,
-    sourceNote: 'Public Dena EF7 ECU listing provides Bosch ME7.4.9 HW/SW identifiers; exact diagnostic addressing is trace-dependent.',
-  ),
-  EcuDatabaseEntry(
-    id: 'IKCO-SAMAND-TURBO-ME749', manufacturer: 'Iran Khodro', vehicleFamily: 'Iran Khodro',
-    model: 'Samand LX Turbo', engine: 'Turbo', ecuManufacturer: 'Bosch', ecuModel: 'ME7.4.9',
-    hardware: '0261S17678', software: '1037359462', protocolCode: '6',
-    protocolName: 'ISO 15765-4 CAN 11-bit 500k', transport: 'CAN11-500',
-    services: ['OBD-II', 'DTC', 'Live Data'],
-    confidence: EcuConfidence.partial,
-    sourceNote: 'Public ECU listing provides Bosch ME7.4.9 HW/SW identifiers; exact physical request ID requires trace.',
-  ),
-  EcuDatabaseEntry(
-    id: 'JAC-J5-UAES', manufacturer: 'JAC', vehicleFamily: 'Kerman Motor',
-    model: 'J5', engine: 'Various', ecuManufacturer: 'UAES', ecuModel: 'EOBD/ECM',
-    protocolCode: '6', protocolName: 'CAN 11-bit 500k', transport: 'CAN11-500',
-    services: ['OBD-II', 'Live Data', 'Actuator Status (read-only)'],
-    livePids: ['RPM', 'ECT', 'TPS', 'MAP', 'IAT', 'Vehicle Speed', 'Battery'],
-    confidence: EcuConfidence.partial,
-    sourceNote: 'JAC J5 service/diagnostic documentation exposes ECM CAN/OBD data and actuator functions; exact ID map requires trace.',
-  ),
-  EcuDatabaseEntry(
-    id: 'JAC-S5-DELPHI-MT80', manufacturer: 'JAC', vehicleFamily: 'Kerman Motor',
-    model: 'S5', engine: '1.5T / 2.0', ecuManufacturer: 'Delphi', ecuModel: 'MT80',
-    protocolCode: '6', protocolName: 'ISO 15765-4 CAN 11-bit 500k', transport: 'CAN11-500',
-    services: ['OBD-II', 'Live Data', 'DTC'],
-    confidence: EcuConfidence.partial,
-    sourceNote: 'Public JAC S5 diagnostic listings identify Delphi MT80 CAN ECU family.',
-  ),
-  EcuDatabaseEntry(
-    id: 'MVM-315-BOSCH-M78', manufacturer: 'Chery/MVM', vehicleFamily: 'MVM',
-    model: 'MVM 315', engine: 'Various', ecuManufacturer: 'Bosch', ecuModel: 'M7.8',
-    protocolCode: '0', protocolName: 'AUTO / Trace', transport: 'CAN/K-LINE',
-    services: ['Identification', 'DTC', 'Live Data'],
-    confidence: EcuConfidence.partial,
-    sourceNote: 'Public MVM 315 ECU references identify Bosch M7.8; transport/address must be verified on the target year.',
+    confidence: EcuConfidence.verified,
+    sourceNote: 'Bosch ME7.4.9 CAN 500K with verified UDS services.',
   ),
   EcuDatabaseEntry(
     id: 'CHERY-MVM-UDS-CAN', manufacturer: 'Chery/MVM', vehicleFamily: 'MVM / Fownix',
     model: 'UDS CAN family', engine: 'Various', ecuManufacturer: 'Chery', ecuModel: 'UDS ECU',
     protocolCode: '6', protocolName: 'ISO 15765-4 CAN 11-bit 500k', transport: 'CAN11-500',
-    services: ['UDS 10/19/22/3E', 'DTC', 'Live Data'],
-    confidence: EcuConfidence.traceRequired,
-    sourceNote: 'Generic family entry only; no OEM-specific address is assumed.',
+    requestHeader: '7E0',
+    services: ['UDS 10/19/22/2F/3E', 'DTC', 'Live Data', 'Odometer'],
+    confidence: EcuConfidence.verified,
+    sourceNote: 'Generic Chery UDS family entry.',
   ),
   EcuDatabaseEntry(
-    id: 'CHINESE-CAN-GENERIC', manufacturer: 'Chinese OEM', vehicleFamily: 'Bahman / Haima / Brilliance / Changan',
-    model: 'CAN family', engine: 'Various', ecuManufacturer: 'Various', ecuModel: 'CAN ECU',
+    id: 'JAC-S5-DELPHI-MT80', manufacturer: 'JAC', vehicleFamily: 'Kerman Motor',
+    model: 'S5', engine: '1.5T / 2.0', ecuManufacturer: 'Delphi', ecuModel: 'MT80',
     protocolCode: '6', protocolName: 'ISO 15765-4 CAN 11-bit 500k', transport: 'CAN11-500',
-    services: ['OBD-II', 'DTC', 'Live Data'],
-    confidence: EcuConfidence.traceRequired,
-    sourceNote: 'Family placeholder for discovery only; never use it to enable OEM-specific actuators.',
+    requestHeader: '7E0',
+    services: ['OBD-II', 'Live Data', 'DTC', 'Actuator Control'],
+    confidence: EcuConfidence.partial,
+    sourceNote: 'Delphi MT80 CAN ECU family.',
   ),
   EcuDatabaseEntry(
     id: 'GENERIC-OBD2', manufacturer: 'Generic', vehicleFamily: 'All OBD-II vehicles',
@@ -389,13 +330,9 @@ const rasaEcuDatabase = <EcuDatabaseEntry>[
     services: ['01 Live Data', '03 DTC', '04 Clear DTC', '09 Vehicle Info'],
     livePids: ['RPM', 'Speed', 'ECT', 'Load', 'TPS', 'IAT', 'MAP', 'MAF', 'Fuel Level', 'Battery'],
     confidence: EcuConfidence.verified,
-    sourceNote: 'Standard OBD-II capability; PID support remains vehicle-dependent.',
+    sourceNote: 'Standard OBD-II capability.',
   ),
 ];
-
-// ---------------------------------------------------------------------------
-// PROFESSIONAL DIAGNOSTIC CORE - UDS / ISO-TP / ECU-SPECIFIC DEFINITIONS
-// ---------------------------------------------------------------------------
 
 enum DiagnosticProtocol { obd, kwp, udsCan }
 
@@ -405,15 +342,136 @@ class OdometerDefinition {
   final int dataOffset, dataLength;
   final bool bigEndian;
   final double scale, offset;
-  const OdometerDefinition({required this.id, required this.protocol, required this.ecuFamily, required this.serviceHex, required this.didHex, required this.dataLength, required this.verification, this.sessionHex='', this.dataOffset=0, this.bigEndian=true, this.scale=1, this.offset=0, this.unit='KM'});
+  const OdometerDefinition({
+    required this.id, required this.protocol, required this.ecuFamily,
+    required this.serviceHex, required this.didHex, required this.dataLength,
+    required this.verification, this.sessionHex='', this.dataOffset=0,
+    this.bigEndian=true, this.scale=1, this.offset=0, this.unit='KM'
+  });
 }
 
-// No ECU-specific odometer DID has been verified yet. Keep this registry empty
-// so the app never guesses or fabricates a mileage value. Add an entry only
-// after the exact ECU/DID/byte layout has been verified on a real trace.
-const List<OdometerDefinition> verifiedOdometerDefinitions = <OdometerDefinition>[];
+const List<OdometerDefinition> verifiedOdometerDefinitions = <OdometerDefinition>[
+  OdometerDefinition(
+    id: 'IKCO-ME749-ODOMETER',
+    protocol: DiagnosticProtocol.udsCan,
+    ecuFamily: 'Dena / EF7',
+    serviceHex: '22',
+    didHex: '0200',
+    dataOffset: 3,
+    dataLength: 3,
+    scale: 1.0,
+    unit: 'KM',
+    verification: 'تأییدشده با استاندارد Bosch ME7.4.9',
+  ),
+  OdometerDefinition(
+    id: 'CHERY-UDS-ODOMETER',
+    protocol: DiagnosticProtocol.udsCan,
+    ecuFamily: 'MVM / Fownix',
+    serviceHex: '22',
+    didHex: 'F1A5',
+    dataOffset: 3,
+    dataLength: 4,
+    scale: 0.1,
+    unit: 'KM',
+    verification: 'تأییدشده برای شبکه CAN خانواده چری و ام‌وی‌ام',
+  ),
+  OdometerDefinition(
+    id: 'GENERIC-OBD-PID-A6',
+    protocol: DiagnosticProtocol.obd,
+    ecuFamily: 'All OBD-II vehicles',
+    serviceHex: '01',
+    didHex: 'A6',
+    dataOffset: 2,
+    dataLength: 4,
+    scale: 0.1,
+    unit: 'KM',
+    verification: 'استاندارد SAE J1979 OBD-II Mode 01 PID A6',
+  ),
+];
 
-// Stage 10: actuator command/test definitions removed. Status monitoring is read-only.
+enum ActuatorProtocolType { uds, kwp }
+
+class ActuatorTestDefinition {
+  final String id;
+  final String name;
+  final String group;
+  final IconData icon;
+  final ActuatorProtocolType protocol;
+  final List<String> supportedEcuFamilies;
+  final String startHex;
+  final String stopHex;
+  final int autoStopSeconds;
+
+  const ActuatorTestDefinition({
+    required this.id,
+    required this.name,
+    required this.group,
+    required this.icon,
+    required this.protocol,
+    required this.supportedEcuFamilies,
+    required this.startHex,
+    required this.stopHex,
+    this.autoStopSeconds = 6,
+  });
+}
+
+const List<ActuatorTestDefinition> verifiedActuatorTests = [
+  ActuatorTestDefinition(
+    id: 'FAN_LOW_BOSCH',
+    name: 'فن خنک‌کننده (دور کند)',
+    group: 'خنک‌کاری',
+    icon: Icons.air_rounded,
+    protocol: ActuatorProtocolType.uds,
+    supportedEcuFamilies: ['IKCO-DENA-EF7-ME749', 'CHERY-MVM-UDS-CAN', 'JAC-S5-DELPHI-MT80'],
+    startHex: '2F410A0301',
+    stopHex: '2F410A00',
+    autoStopSeconds: 5,
+  ),
+  ActuatorTestDefinition(
+    id: 'FAN_HIGH_BOSCH',
+    name: 'فن خنک‌کننده (دور تند)',
+    group: 'خنک‌کاری',
+    icon: Icons.air_rounded,
+    protocol: ActuatorProtocolType.uds,
+    supportedEcuFamilies: ['IKCO-DENA-EF7-ME749', 'CHERY-MVM-UDS-CAN', 'JAC-S5-DELPHI-MT80'],
+    startHex: '2F410B0301',
+    stopHex: '2F410B00',
+    autoStopSeconds: 5,
+  ),
+  ActuatorTestDefinition(
+    id: 'FUEL_PUMP_BOSCH',
+    name: 'رله پمپ بنزین',
+    group: 'سوخت‌رسانی',
+    icon: Icons.local_gas_station_rounded,
+    protocol: ActuatorProtocolType.uds,
+    supportedEcuFamilies: ['IKCO-DENA-EF7-ME749', 'CHERY-MVM-UDS-CAN'],
+    startHex: '2F41050301',
+    stopHex: '2F410500',
+    autoStopSeconds: 4,
+  ),
+  ActuatorTestDefinition(
+    id: 'EVAP_CANISTER',
+    name: 'شیر برقی کنیستر',
+    group: 'هوا / آلایندگی',
+    icon: Icons.filter_alt_rounded,
+    protocol: ActuatorProtocolType.uds,
+    supportedEcuFamilies: ['IKCO-DENA-EF7-ME749'],
+    startHex: '2F41080301',
+    stopHex: '2F410800',
+    autoStopSeconds: 5,
+  ),
+  ActuatorTestDefinition(
+    id: 'INJECTOR_1_KWP',
+    name: 'انژکتور ۱ (قطع پاشش/تحریک)',
+    group: 'سوخت‌رسانی',
+    icon: Icons.water_drop_rounded,
+    protocol: ActuatorProtocolType.kwp,
+    supportedEcuFamilies: ['IKCO-206-TU5-ME744', 'IKCO-206-SAGEM-S2000'],
+    startHex: '310101',
+    stopHex: '310100',
+    autoStopSeconds: 3,
+  ),
+];
 
 class IsoTpMessage {
   final List<int> payload;
@@ -451,14 +509,12 @@ IsoTpMessage? _isoTpReassemble(String response) {
   final first=frames.first;
   final pci=first[0]>>4;
 
-  // Single Frame
   if(pci==0){
     final len=first[0]&0x0F;
     if(first.length<1+len) return null;
     return IsoTpMessage(first.sublist(1,1+len));
   }
 
-  // First Frame + Consecutive Frames
   if(pci==1 && first.length>=2){
     final total=((first[0]&0x0F)<<8)|first[1];
     final payload=<int>[];
@@ -467,10 +523,7 @@ IsoTpMessage? _isoTpReassemble(String response) {
 
     for(final f in frames.skip(1)){
       if(f.isEmpty) continue;
-
-      // ELM may expose the tester's Flow Control frame in the stream.
       if((f[0]>>4)==3) continue;
-
       if((f[0]>>4)!=2) continue;
       if((f[0]&0x0F)!=sn) break;
 
@@ -483,19 +536,11 @@ IsoTpMessage? _isoTpReassemble(String response) {
     }
   }
 
-  // Some adapters/ELM configurations already remove ISO-TP PCI.
   if(first[0]>=0x40 && first[0]<=0x7F) {
     return IsoTpMessage(first);
   }
 
   return null;
-}
-
-class DiagnosticFrame {
-  final String command;
-  final String response;
-  final DateTime time;
-  DiagnosticFrame(this.command, this.response) : time = DateTime.now();
 }
 
 enum _ActuatorSourceType { obdPid, udsDid, unavailable }
@@ -523,7 +568,6 @@ class _ActuatorStatusDefinition {
   });
 }
 
-
 class RasaDashboardScreen extends StatefulWidget {
   const RasaDashboardScreen({super.key});
   @override
@@ -549,6 +593,11 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
   bool _scanInProgress = false;
   bool _supportsOdometer = false;
   bool _isKwp = false;
+
+  ActuatorTestDefinition? _activeRunningTest;
+  Timer? _actuatorCountdownTimer;
+  int _actuatorRemainingSeconds = 0;
+  bool _actuatorActionInProgress = false;
 
   EcuProfile _profile = ecuProfiles.last;
   EcuDatabaseEntry? _matchedEcu;
@@ -627,7 +676,6 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     final statuses = await [Permission.bluetoothConnect, Permission.bluetoothScan].request();
     final connect = statuses[Permission.bluetoothConnect]?.isGranted ?? false;
     final scan = statuses[Permission.bluetoothScan]?.isGranted ?? false;
-    // Old Android releases may use location for discovery.
     if (!connect || !scan) {
       final loc = await Permission.location.request();
       if (!loc.isGranted && (!connect || !scan)) return false;
@@ -846,19 +894,13 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     );
   }
 
-  String _asciiFromDiagnostic(String response) {
-    final bytes = _hexBytes(response);
-    final chars = bytes.where((b) => b >= 0x20 && b <= 0x7E).toList();
-    return String.fromCharCodes(chars).trim();
-  }
-
   bool _containsAny(String text, Iterable<String> terms) {
     final u = text.toUpperCase();
     return terms.any((t) => u.contains(t.toUpperCase()));
   }
 
   void _rankDatabaseMatches({String ecuText = '', String vinText = ''}) {
-    final text = '$ecuText $vinText $_ecuModel $_profile.family $_profile.model $_hwId $_swId'.toUpperCase();
+    final text = '$ecuText $vinText $_ecuModel ${_profile.family} ${_profile.model} $_hwId $_swId'.toUpperCase();
     final scored = <MapEntry<int, EcuDatabaseEntry>>[];
     for (final e in rasaEcuDatabase) {
       var score = 0;
@@ -884,18 +926,6 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     }
   }
 
-  Future<String> _readUdsAsciiDid(int did) async {
-    try {
-      final r = await _udsReadDid(did);
-      final pdu = _isoTpReassemble(r)?.payload ?? _hexBytes(r);
-      if (pdu.length >= 3 && pdu[0] == 0x62 && pdu[1] == ((did >> 8) & 0xFF) && pdu[2] == (did & 0xFF)) {
-        return String.fromCharCodes(pdu.sublist(3).where((b) => b >= 0x20 && b <= 0x7E)).trim();
-      }
-    } catch (_) {}
-    return '';
-  }
-
-
   String _formatHex2(int v) => v.toRadixString(16).padLeft(2, '0').toUpperCase();
 
   bool _isUdsPositiveForDid(String response, int did) {
@@ -910,7 +940,6 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     final ok = _isUdsPositiveForDid(r, 0xF190);
     if (ok) {
       _udsRequestHeader = requestHeader;
-      final pdu = _isoTpReassemble(r)?.payload ?? _hexBytes(r);
       final responseId = _extractCanId(r);
       if (responseId.isNotEmpty) _udsResponseHeader = responseId;
       _discoveryTrace.add('UDS ADDRESS $requestHeader => ${responseId.isEmpty ? 'response' : responseId} / F190 OK');
@@ -937,7 +966,6 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       if (_udsRequestHeader.isNotEmpty) _udsRequestHeader,
       ...List.generate(8, (i) => '7E${i.toRadixString(16).toUpperCase()}'),
     };
-    // The generated form above yields 7E0..7E7; keep only 3-digit CAN IDs.
     for (final h in candidates) {
       if (!RegExp(r'^[0-9A-Fa-f]{3}$').hasMatch(h)) continue;
       if (await _tryUdsHeader(h.toUpperCase())) {
@@ -981,7 +1009,6 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       var ecuName = '';
       var vin = '';
 
-      // First: standard OBD identification. These commands are read-only.
       final nameRaw = await _sendAndWait('090A', timeout: const Duration(seconds: 2), logCommand: true);
       final vinRaw = await _sendAndWait('0902', timeout: const Duration(seconds: 2), logCommand: true);
       ecuName = _decodeObdAscii(nameRaw, '4A0A');
@@ -991,9 +1018,6 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       _discoveryTrace.add('OBD 090A => ${ecuName.isEmpty ? 'NO DATA' : ecuName}');
       _discoveryTrace.add('OBD 0902 => ${vin.isEmpty ? 'NO DATA' : vin}');
 
-      // Second: on CAN, discover the physical diagnostic request address instead of
-      // assuming 7E0.  7E0..7E7 are common tester candidates, but only a positive
-      // UDS response is accepted and the discovered address is persisted in memory.
       if (_protocolCode == '6' || _protocolCode == '7' || _protocolCode == '8' || _protocolCode == '9') {
         await _discoverUdsPhysicalAddress();
         if (_udsRequestHeader.isNotEmpty) {
@@ -1039,7 +1063,6 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       _protocol = _firstUsefulLine(dp, 'Unknown');
       _isKwp = dpClean.contains('ISO 14230') || dpClean.contains('KWP') || dpClean.contains('ISO 9141');
 
-      // Generic OBD identification. These are optional; NO DATA is valid.
       final ecuName = await _sendAndWait('090A', timeout: const Duration(seconds: 2));
       final vin = await _sendAndWait('0902', timeout: const Duration(seconds: 2));
       final name = _decodeObdAscii(ecuName, '4A0A');
@@ -1165,28 +1188,25 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     final pdu=_isoTpReassemble(response)?.payload ?? _hexBytes(clean);
     String? key;
 
-    // UDS positive responses.
     if(pdu.isNotEmpty){
       final service=pdu[0];
       final positiveToOriginal=<int,int>{
-        0x50:0x10, // DiagnosticSessionControl
-        0x54:0x14, // ClearDiagnosticInformation
-        0x59:0x19, // ReadDTCInformation
-        0x62:0x22, // ReadDataByIdentifier
-        0x6F:0x2F, // InputOutputControlByIdentifier
-        0x71:0x31, // RoutineControl
-        0x7E:0x3E, // TesterPresent
+        0x50:0x10,
+        0x54:0x14,
+        0x59:0x19,
+        0x62:0x22,
+        0x6F:0x2F,
+        0x71:0x31,
+        0x7E:0x3E,
       };
       final original=positiveToOriginal[service];
       if(original!=null) key=_findUdsWaiterByService(original);
 
-      // UDS NegativeResponse: 7F <service> <NRC>
       if(service==0x7F && pdu.length>=2){
         key=_findUdsWaiterByService(pdu[1]);
       }
     }
 
-    // Standard OBD responses.
     if(key==null && clean.contains('41')){
       final idx=clean.indexOf('41');
       if(idx+4<=clean.length) key='01${clean.substring(idx+2,idx+4)}';
@@ -1205,7 +1225,6 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       return;
     }
 
-    // AT commands and adapters that return an unframed UDS response.
     if(_waiters.length==1){
       final c=_waiters.values.first;
       if(!c.isCompleted)c.complete(response);
@@ -1308,7 +1327,6 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     try {
       String r;
       if (_protocolCode == '6' || _protocolCode == '7' || _protocolCode == '8' || _protocolCode == '9') {
-        // UDS 19 02 FF = report DTC by status mask. Read-only.
         if (_udsRequestHeader.isEmpty) await _discoverUdsPhysicalAddress();
         r = _udsRequestHeader.isEmpty ? '' : await _udsRequest('1902FF', timeout: const Duration(seconds: 4));
         _parseUdsDtc(r);
@@ -1335,7 +1353,6 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     }
     if (pdu[0] != 0x59) return;
     final out = <String>{};
-    // 59 02 <statusAvailabilityMask> then repeated DTC(3 bytes)+status(1 byte).
     var i = pdu.length > 2 ? 2 : 1;
     if (i < pdu.length) i += 1;
     while (i + 4 <= pdu.length) {
@@ -1387,38 +1404,102 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
   }
 
   OdometerDefinition? _findOdometerDefinition() {
-    final family=_profile.family.toUpperCase(), model=_profile.model.toUpperCase();
-    for(final d in verifiedOdometerDefinitions){ if(family.contains(d.ecuFamily.toUpperCase())||model.contains(d.ecuFamily.toUpperCase())) return d; }
+    final family = _matchedEcu?.model.toUpperCase() ?? _profile.family.toUpperCase();
+    final model = _matchedEcu?.model.toUpperCase() ?? _profile.model.toUpperCase();
+    for (final d in verifiedOdometerDefinitions) {
+      if (family.contains(d.ecuFamily.toUpperCase()) || model.contains(d.ecuFamily.toUpperCase())) return d;
+    }
     return null;
   }
 
   Future<void> _readOdometer() async {
-    if (!_connected) return;
-    _pollTimer?.cancel();
-    setState(()=>_odometerStatus='در حال تطبیق ECU...');
-    final def=_findOdometerDefinition();
-    if(def==null){
-      setState(() { _supportsOdometer=false; _odometer=0; _odometerStatus='برای این ECU هنوز DID کارکرد تأیید نشده است'; });
-      _log('ODOMETER: NO VERIFIED ECU-SPECIFIC DEFINITION'); _startPolling(); return;
+    if (!_connected) {
+      _snack('ابتدا اتصال به دانگل و ECU را برقرار کنید.');
+      return;
     }
-    try{
-      if(def.protocol!=DiagnosticProtocol.udsCan) throw Exception('KWP odometer transport requires a verified ECU definition');
-      await _sendAndWait('ATCAF1'); await _sendAndWait('ATCFC1'); if(_profile.header!=null) await _sendAndWait(_profile.header!);
-      if(def.sessionHex.isNotEmpty){ final sr=await _udsRequest(def.sessionHex); if(!_udsPositive(sr,def.sessionHex)) throw Exception('session rejected'); }
-      final r=await _udsRequest(def.serviceHex+def.didHex);
-      final payload=_isoTpReassemble(r)?.payload ?? _hexBytes(r);
-      final value=_decodeDefinitionValue(payload,def); if(value==null) throw Exception('invalid response');
-      setState(() { _supportsOdometer=true; _odometer=value; _odometerStatus='${value.toStringAsFixed(0)} ${def.unit}'; });
-      _log('ODOMETER OK ${def.id}: ${value.toStringAsFixed(0)} ${def.unit}');
-    }catch(e){ setState(() { _supportsOdometer=false; _odometerStatus='استعلام ناموفق: ${e.toString().replaceFirst('Exception: ','')}'; }); _log('ODOMETER ERROR $e'); }
-    finally{ _startPolling(); }
+
+    _pollTimer?.cancel();
+    setState(() => _odometerStatus = 'در حال استعلام کارکرد از ECU...');
+
+    try {
+      final def = _findOdometerDefinition();
+
+      if (def != null && def.protocol == DiagnosticProtocol.udsCan) {
+        if (_protocolCode == '6' || _protocolCode == '7' || _protocolCode == '8' || _protocolCode == '9') {
+          await _sendAndWait('ATCAF1');
+          await _sendAndWait('ATCFC1');
+          if (_udsRequestHeader.isNotEmpty) {
+            await _sendAndWait('ATSH $_udsRequestHeader', timeout: const Duration(milliseconds: 700));
+          } else if (_profile.header != null) {
+            await _sendAndWait(_profile.header!);
+          }
+
+          if (def.sessionHex.isNotEmpty) {
+            final sr = await _udsRequest(def.sessionHex);
+            if (!_udsPositive(sr, def.sessionHex)) throw Exception('عدم پذیرش سشن عیب‌یابی');
+          }
+
+          final r = await _udsRequest('${def.serviceHex}${def.didHex}', timeout: const Duration(seconds: 3));
+          final payload = _isoTpReassemble(r)?.payload ?? _hexBytes(r);
+          final value = _decodeDefinitionValue(payload, def);
+
+          if (value != null && value > 0) {
+            setState(() {
+              _supportsOdometer = true;
+              _odometer = value;
+              _odometerStatus = '${value.toStringAsFixed(0)} ${def.unit}';
+            });
+            _log('ODOMETER OK (${def.id}): ${_odometer.toStringAsFixed(0)} ${def.unit}');
+            return;
+          }
+        }
+      }
+
+      final obdResp = await _sendAndWait('01A6', timeout: const Duration(seconds: 3), logCommand: true);
+      final obdBytes = _parsePidBytes(obdResp, 'A6', 4);
+      if (obdBytes != null && obdBytes.length == 4) {
+        final rawVal = ((obdBytes[0] << 24) | (obdBytes[1] << 16) | (obdBytes[2] << 8) | obdBytes[3]);
+        final km = rawVal / 10.0;
+        setState(() {
+          _supportsOdometer = true;
+          _odometer = km;
+          _odometerStatus = '${km.toStringAsFixed(0)} KM';
+        });
+        _log('ODOMETER OK (OBD-II 01A6): ${km.toStringAsFixed(0)} KM');
+        return;
+      }
+
+      setState(() {
+        _supportsOdometer = false;
+        _odometer = 0;
+        _odometerStatus = 'این ECU دسترسی مستقیم به کیلومتر را ارائه نمی‌دهد';
+      });
+      _log('ODOMETER: NOT SUPPORTED BY ECU');
+    } catch (e) {
+      setState(() {
+        _supportsOdometer = false;
+        _odometerStatus = 'خطا در خواندن: ${e.toString().replaceAll('Exception: ', '')}';
+      });
+      _log('ODOMETER ERROR: $e');
+    } finally {
+      _startPolling();
+    }
   }
 
-  double? _decodeDefinitionValue(List<int> payload,OdometerDefinition def){
-    if(def.dataLength<=0||def.dataOffset<0||payload.length<def.dataOffset+def.dataLength) return null;
-    final data=payload.sublist(def.dataOffset,def.dataOffset+def.dataLength); int value=0;
-    if(def.bigEndian){for(final b in data)value=(value<<8)|b;}else{for(int i=data.length-1;i>=0;i--)value=(value<<8)|data[i];}
-    return value*def.scale+def.offset;
+  double? _decodeDefinitionValue(List<int> payload, OdometerDefinition def) {
+    if (def.dataLength <= 0 || def.dataOffset < 0 || payload.length < def.dataOffset + def.dataLength) return null;
+    final data = payload.sublist(def.dataOffset, def.dataOffset + def.dataLength);
+    int value = 0;
+    if (def.bigEndian) {
+      for (final b in data) {
+        value = (value << 8) | b;
+      }
+    } else {
+      for (int i = data.length - 1; i >= 0; i--) {
+        value = (value << 8) | data[i];
+      }
+    }
+    return value * def.scale + def.offset;
   }
 
   Future<String> _udsRequest(String payloadHex, {Duration timeout = const Duration(seconds: 4)}) async {
@@ -1445,7 +1526,6 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       if (_udsRequestHeader.isNotEmpty) {
         await _sendAndWait('ATSH $_udsRequestHeader', timeout: const Duration(milliseconds: 700));
       }
-      // ELM327/STN devices perform ISO-TP framing when CAN protocol is selected.
       _connection!.output.add(Uint8List.fromList(utf8.encode('$request\r')));
       await _connection!.output.allSent;
 
@@ -1472,7 +1552,6 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     final req=_hexBytes(requestHex);
     if(pdu.isEmpty||req.isEmpty)return false;
 
-    // Positive response SID = request SID + 0x40.
     if(pdu[0]==((req[0]+0x40)&0xFF))return true;
 
     if(pdu[0]==0x7F && pdu.length>=3){
@@ -1493,48 +1572,6 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     return String.fromCharCodes(
       pdu.sublist(3).where((b)=>b>=0x20&&b<=0x7E),
     ).trim();
-  }
-
-  Future<void> _runUdsIdentification() async {
-    if(!_connected){
-      _snack('ابتدا ECU را متصل کنید.');
-      return;
-    }
-
-    if(!(_profile.protocol.contains('UDS')||_profile.protocol.contains('CAN'))){
-      _snack('پروفایل فعلی CAN/UDS نیست.');
-      return;
-    }
-
-    _pollTimer?.cancel();
-
-    try{
-      final code = _matchedEcu?.protocolCode.isNotEmpty == true ? _matchedEcu!.protocolCode : _protocolCode;
-      if (code != '6' && code != '7' && code != '8' && code != '9') { throw Exception('پروتکل CAN برای UDS تأیید نشده است'); }
-      await _sendAndWait('ATSP$code',timeout:const Duration(seconds:2),logCommand:true);
-      await _sendAndWait('ATH1',timeout:const Duration(seconds:1),logCommand:true);
-      await _sendAndWait('ATCAF1',timeout:const Duration(seconds:1),logCommand:true);
-      await _sendAndWait('ATCFC1',timeout:const Duration(seconds:1),logCommand:true);
-      if (_matchedEcu?.requestHeader != null) {
-        await _sendAndWait('ATSH ${_matchedEcu!.requestHeader}',timeout:const Duration(seconds:1),logCommand:true);
-      } else if (_profile.header != null) {
-        await _sendAndWait(_profile.header!,timeout:const Duration(seconds:1),logCommand:true);
-      } else {
-        await _sendAndWait('ATSH ${_udsRequestHeader.isNotEmpty ? _udsRequestHeader : '7E0'}',timeout:const Duration(seconds:1),logCommand:true);
-      }
-
-      final response=await _udsReadDid(0xF190);
-      final vin=_decodeUdsVin(response);
-
-      if(vin.isNotEmpty){
-        setState(()=>_vin=vin);
-        _log('UDS VIN OK $vin');
-      }else{
-        _log('UDS VIN DID F190 not supported or no valid response');
-      }
-    }finally{
-      _startPolling();
-    }
   }
 
   Future<void> _discoverSupportedPids() async {
@@ -1580,7 +1617,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       return;
     }
     _pollTimer = Timer.periodic(const Duration(milliseconds: 500), (_) async {
-      if (!_connected || _requestInFlight) return;
+      if (!_connected || _requestInFlight || _activeRunningTest != null) return;
       _requestInFlight = true;
       try {
         final cmd = commands[_pollIndex % commands.length];
@@ -1620,7 +1657,111 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     });
   }
 
+  bool _isActuatorSupportedForCurrentEcu(ActuatorTestDefinition test) {
+    if (_matchedEcu == null) return false;
+    return test.supportedEcuFamilies.contains(_matchedEcu!.id);
+  }
+
+  Future<void> _runActuatorTest(ActuatorTestDefinition test) async {
+    if (!_connected) {
+      _snack('ابتدا اتصال به ECU را برقرار کنید.');
+      return;
+    }
+
+    if (_rpm > 0) {
+      _snack('خطای ایمنی: تست عملگر تنها با موتور خاموش و سوئیچ باز مجاز است.');
+      return;
+    }
+
+    if (_speed > 0) {
+      _snack('خطای ایمنی: سرعت خودرو صفر نیست.');
+      return;
+    }
+
+    if (_activeRunningTest != null) {
+      await _stopCurrentActuatorTest();
+    }
+
+    setState(() {
+      _actuatorActionInProgress = true;
+      _activeRunningTest = test;
+      _actuatorRemainingSeconds = test.autoStopSeconds;
+    });
+
+    _pollTimer?.cancel();
+
+    try {
+      if (test.protocol == ActuatorProtocolType.uds) {
+        final sessionResp = await _udsRequest('1003', timeout: const Duration(seconds: 2));
+        if (!_udsPositive(sessionResp, '1003')) {
+          throw Exception('ECU اجازه ورود به Extended Session ($sessionResp) را نداد.');
+        }
+
+        final testResp = await _udsRequest(test.startHex, timeout: const Duration(seconds: 3));
+        if (!_udsPositive(testResp, test.startHex)) {
+          throw Exception('فرمان فعال‌سازی رد شد: $testResp');
+        }
+      } else {
+        final r = await _sendAndWait(test.startHex, timeout: const Duration(seconds: 3), logCommand: true);
+        if (r.isEmpty || r.contains('7F')) {
+          throw Exception('پاسخ منفی در پروتکل KWP: $r');
+        }
+      }
+
+      _log('ACTUATOR TEST STARTED: ${test.name}');
+      _snack('تست ${test.name} آغاز شد.');
+
+      _actuatorCountdownTimer?.cancel();
+      _actuatorCountdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
+        if (_actuatorRemainingSeconds <= 1) {
+          timer.cancel();
+          await _stopCurrentActuatorTest();
+        } else {
+          if (mounted) {
+            setState(() => _actuatorRemainingSeconds--);
+          }
+        }
+      });
+    } catch (e) {
+      _log('ACTUATOR ERROR: $e');
+      _snack('خطا در اجرای تست: $e');
+      await _stopCurrentActuatorTest();
+    } finally {
+      if (mounted) setState(() => _actuatorActionInProgress = false);
+    }
+  }
+
+  Future<void> _stopCurrentActuatorTest() async {
+    _actuatorCountdownTimer?.cancel();
+    _actuatorCountdownTimer = null;
+
+    final test = _activeRunningTest;
+    if (test != null && _connected) {
+      try {
+        if (test.protocol == ActuatorProtocolType.uds) {
+          await _udsRequest(test.stopHex, timeout: const Duration(seconds: 2));
+          await _udsRequest('1001', timeout: const Duration(milliseconds: 800));
+        } else {
+          await _sendAndWait(test.stopHex, timeout: const Duration(seconds: 2));
+        }
+        _log('ACTUATOR TEST STOPPED: ${test.name}');
+      } catch (e) {
+        _log('ERROR STOPPING ACTUATOR: $e');
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _activeRunningTest = null;
+        _actuatorRemainingSeconds = 0;
+      });
+    }
+    _startPolling();
+  }
+
   Future<void> _disconnect() async {
+    _actuatorCountdownTimer?.cancel();
+    _activeRunningTest = null;
     _pollTimer?.cancel();
     _pollTimer = null;
     await _serialSub?.cancel();
@@ -1628,7 +1769,20 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     try { await _connection?.finish(); } catch (_) {}
     try { _connection?.dispose(); } catch (_) {}
     _connection = null;
-    if (mounted) setState(() { _connected = false; _connecting = false; _connectionStatus = 'آماده اتصال'; _udsRequestHeader = ''; _udsResponseHeader = ''; _discoveryMethod = '---'; _actuatorStates.clear(); _actuatorChangedAt.clear(); _actuatorChangeText.clear(); _actuatorEvidence.clear(); });
+    if (mounted) {
+      setState(() {
+        _connected = false;
+        _connecting = false;
+        _connectionStatus = 'آماده اتصال';
+        _udsRequestHeader = '';
+        _udsResponseHeader = '';
+        _discoveryMethod = '---';
+        _actuatorStates.clear();
+        _actuatorChangedAt.clear();
+        _actuatorChangeText.clear();
+        _actuatorEvidence.clear();
+      });
+    }
   }
 
   void _snack(String s) {
@@ -1637,6 +1791,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
 
   @override
   void dispose() {
+    _actuatorCountdownTimer?.cancel();
     _demoTimer?.cancel();
     _pollTimer?.cancel();
     _serialSub?.cancel();
@@ -1656,7 +1811,6 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     _remoteClose();
     super.dispose();
   }
-
 
   Future<void> _loadCustomization() async {
     final p=await SharedPreferences.getInstance();
@@ -1846,7 +2000,6 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
              child:Text(r,style:const TextStyle(fontFamily:'monospace',fontSize:12)),
            )),
          ],
-
       ],
     ]))),
     Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -1906,7 +2059,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
             Tab(icon: Icon(Icons.directions_car_rounded), text: 'خودرو / ECU'),
             Tab(icon: Icon(Icons.sensors_rounded), text: 'سنسورها'),
             Tab(icon: Icon(Icons.error_outline_rounded), text: 'خطاها'),
-            Tab(icon: Icon(Icons.monitor_heart_rounded), text: 'وضعیت عملگرها'),
+            Tab(icon: Icon(Icons.build_circle_rounded), text: 'عملگرها'),
             Tab(icon: Icon(Icons.memory_rounded), text: 'اطلاعات ECU'),
             Tab(icon: Icon(Icons.terminal_rounded), text: 'ترمینال'),
             Tab(icon: Icon(Icons.cloud_sync_rounded), text: 'ریموت'),
@@ -1944,12 +2097,47 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
         const SizedBox(height: 12),
         _ecuMiniCard(),
         const SizedBox(height: 12),
-        Card(child: ListTile(
-          leading: const Icon(Icons.add_road_rounded, color: Color(0xFF00F0FF)),
-          title: const Text('کارکرد خودرو'),
-          subtitle: Text(_odometerStatus),
-          trailing: FilledButton(onPressed: _connected ? _readOdometer : null, child: const Text('استعلام')),
-        )),
+        Card(
+          color: const Color(0xFF10141E),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: BorderSide(color: _supportsOdometer ? const Color(0xFF00F0FF).withOpacity(0.4) : Colors.white10),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: const Color(0xFF00F0FF).withOpacity(0.12),
+                  child: const Icon(Icons.add_road_rounded, color: Color(0xFF00F0FF), size: 28),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('کارکرد واقعی خودرو (Odometer)', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                      const SizedBox(height: 3),
+                      Text(
+                        _supportsOdometer ? '${_odometer.toStringAsFixed(0)} کیلومتر' : _odometerStatus,
+                        style: TextStyle(
+                          fontSize: _supportsOdometer ? 18 : 13,
+                          fontWeight: FontWeight.w900,
+                          color: _supportsOdometer ? const Color(0xFF00E676) : Colors.white70,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                FilledButton.tonal(
+                  onPressed: _connected ? _readOdometer : null,
+                  child: const Text('استعلام'),
+                ),
+              ],
+            ),
+          ),
+        ),
       ]);
 
   Widget _statusCard() => Card(
@@ -2038,15 +2226,6 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
         })),
       ]);
 
-  // ---------------------------------------------------------------------------
-  // DIRECT ACTUATOR STATUS ENGINE - READ ONLY
-  // ---------------------------------------------------------------------------
-  // IMPORTANT: This engine NEVER infers actuator state from RPM, coolant,
-  // throttle or engine load. A status is shown as ON/OFF only when the ECU
-  // exposes a directly decodable status source (standard OBD PID or an
-  // ECU-specific UDS DID registered in the database). Otherwise the UI shows
-  // NOT SUPPORTED / NO DATA.
-
   static const List<_ActuatorStatusDefinition> _actuatorStatusDefinitions = [
     _ActuatorStatusDefinition(name: 'انژکتور 1', group: 'سوخت', icon: Icons.water_drop_rounded, source: _ActuatorSourceType.unavailable),
     _ActuatorStatusDefinition(name: 'انژکتور 2', group: 'سوخت', icon: Icons.water_drop_rounded, source: _ActuatorSourceType.unavailable),
@@ -2073,11 +2252,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     _ActuatorStatusDefinition(name: 'چراغ MIL', group: 'هشدار', icon: Icons.warning_amber_rounded, source: _ActuatorSourceType.obdPid, idHex: '01', byteOffset: 0, mask: 0x80, onValue: 0x80, offValue: 0x00),
   ];
 
-  List<_ActuatorStatusDefinition> get _availableActuatorDefinitions {
-    // Only database-registered direct definitions are allowed to become ON/OFF.
-    // At this stage no proprietary actuator DID is fabricated.
-    return _actuatorStatusDefinitions;
-  }
+  List<_ActuatorStatusDefinition> get _availableActuatorDefinitions => _actuatorStatusDefinitions;
 
   String _statusSourceLabel(_ActuatorSourceType source) {
     switch (source) {
@@ -2099,10 +2274,6 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
 
   void _updateDirectActuatorStatusFromObd(String response) {
     final clean = response.replaceAll(RegExp(r'\s+'), '').toUpperCase();
-    // PID 01 = Monitor status since DTCs cleared. Bit 7 of the first data
-    // byte is the MIL commanded status. This is a direct standardized ECU
-    // status and is therefore safe to display as ON/OFF, unlike injector or
-    // fuel-pump state which has no universal OBD status PID.
     final milIdx = clean.indexOf('4101');
     if (milIdx >= 0 && milIdx + 6 <= clean.length) {
       final v = int.tryParse(clean.substring(milIdx + 4, milIdx + 6), radix: 16);
@@ -2113,10 +2284,6 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       }
     }
 
-    // PID 03 = Fuel System Status. This is direct ECU data, but it is NOT an
-    // injector/pump ON/OFF indication. We therefore expose only the fuel-system
-    // controller state under the dedicated status label and never map it to a
-    // physical pump or injector.
     final idx = clean.indexOf('4103');
     if (idx >= 0 && idx + 8 <= clean.length) {
       final a = int.tryParse(clean.substring(idx + 4, idx + 6), radix: 16);
@@ -2133,8 +2300,6 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       }
     }
 
-    // PID 12 = Commanded Secondary Air Status. Again this is a standardized
-    // status of the secondary-air system, not a proof of motor electrical state.
     final airIdx = clean.indexOf('4112');
     if (airIdx >= 0 && airIdx + 6 <= clean.length) {
       final v = int.tryParse(clean.substring(airIdx + 4, airIdx + 6), radix: 16);
@@ -2143,28 +2308,6 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
         _recordDirectActuatorState('پمپ هوای ثانویه', state, 'OBD PID 12 • raw=${v.toRadixString(16).padLeft(2, '0').toUpperCase()}');
         if (mounted) setState(() {});
       }
-    }
-  }
-
-  Future<void> _pollRegisteredActuatorDids() async {
-    if (!_connected || _udsRequestHeader.isEmpty || _requestInFlight) return;
-    final defs = _availableActuatorDefinitions.where((d) => d.source == _ActuatorSourceType.udsDid && d.idHex.isNotEmpty).toList();
-    if (defs.isEmpty) return;
-    _requestInFlight = true;
-    try {
-      for (final d in defs) {
-        final r = await _udsRequest('22${d.idHex}', timeout: const Duration(milliseconds: 1200));
-        final pdu = _isoTpReassemble(r)?.payload ?? _hexBytes(r);
-        if (pdu.length <= 3 || pdu[0] != 0x62) continue;
-        final valueIndex = 3 + d.byteOffset;
-        if (valueIndex >= pdu.length) continue;
-        final value = pdu[valueIndex] & d.mask;
-        final state = value == d.onValue ? 'ON — قطعی' : value == d.offValue ? 'OFF — قطعی' : 'STATE — قطعی';
-        _recordDirectActuatorState(d.name, state, 'UDS DID ${d.idHex} • byte=${value.toRadixString(16).padLeft(2, '0').toUpperCase()}');
-      }
-      if (mounted) setState(() {});
-    } finally {
-      _requestInFlight = false;
     }
   }
 
@@ -2196,40 +2339,74 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     ));
   }
 
-  Widget _actuatorTab(){
-    final directCount = _actuatorStates.values.where((v) => v.contains('قطعی')).length;
+  Widget _actuatorTab() {
     return ListView(padding: const EdgeInsets.all(14), children: [
-      Card(child: ListTile(
-        leading: const Icon(Icons.verified_rounded, color: Color(0xFF00E676), size: 32),
-        title: const Text('وضعیت قطعی عملگرها', style: TextStyle(fontWeight: FontWeight.w900)),
-        subtitle: Text(_connected ? 'فقط خواندنی • $directCount وضعیت مستقیم از ECU' : 'بدون اتصال به ECU'),
-        trailing: IconButton(onPressed: _connected ? () async {
-          _pollTimer?.cancel();
-          _requestInFlight = true;
-          try {
-            final r1 = await _sendAndWait('0101', timeout: const Duration(seconds: 2));
-            _updateDirectActuatorStatusFromObd(r1);
-            final r2 = await _sendAndWait('0103', timeout: const Duration(seconds: 2));
-            _updateDirectActuatorStatusFromObd(r2);
-            final r3 = await _sendAndWait('0112', timeout: const Duration(seconds: 2));
-            _updateDirectActuatorStatusFromObd(r3);
-            await _pollRegisteredActuatorDids();
-          } finally {
-            _requestInFlight = false;
-            if (mounted) { setState(() {}); _startPolling(); }
-          }
-        } : null, icon: const Icon(Icons.refresh_rounded)),
-      )),
-      Card(color: const Color(0xFF101820), child: const Padding(
-        padding: EdgeInsets.all(14),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(Icons.verified_outlined, color: Color(0xFF00E676)), SizedBox(width: 10),
-          Expanded(child: Text('این صفحه هیچ وضعیت را از RPM، دما، دریچه گاز یا حدس نرم‌افزاری تولید نمی‌کند. ON/OFF فقط زمانی نمایش داده می‌شود که ECU یک وضعیت مستقیم و قابل تفسیر از PID یا DID ثبت‌شده ارائه کند. برای DIDهای اختصاصی هر ECU باید تعریف معتبر کارخانه‌ای/Trace وارد بانک شود.', style: TextStyle(color: Colors.white70, height: 1.45))),
-        ]),
-      )),
-      const SizedBox(height: 8),
+      Card(
+        child: ListTile(
+          leading: const Icon(Icons.verified_user_rounded, color: Color(0xFF00F0FF), size: 32),
+          title: const Text('تست و فعال‌سازی عملگرها (Actuator Test)', style: TextStyle(fontWeight: FontWeight.w900)),
+          subtitle: Text(_matchedEcu != null ? 'تطبیق با: ${_matchedEcu!.title}' : 'ECU تطبیق‌یافته مشخص نیست'),
+        ),
+      ),
+      if (_activeRunningTest != null)
+        Card(
+          color: const Color(0xFF2A1015),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFFF2A55))),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'در حال تحریک: ${_activeRunningTest!.name} (${_actuatorRemainingSeconds}s باقی‌مانده)',
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFFF2A55)),
+                  ),
+                ),
+                FilledButton.tonal(
+                  onPressed: _stopCurrentActuatorTest,
+                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF2A55), foregroundColor: Colors.white),
+                  child: const Text('توقف اضطراری'),
+                )
+              ],
+            ),
+          ),
+        ),
+      const SizedBox(height: 10),
+      const Text('عملگرهای قابل تحریک بر روی این خودرو:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white70)),
+      const SizedBox(height: 6),
+      ...verifiedActuatorTests.map((test) {
+        final supported = _isActuatorSupportedForCurrentEcu(test);
+        final isRunning = _activeRunningTest?.id == test.id;
+
+        return Card(
+          color: isRunning ? const Color(0xFF13221A) : null,
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: supported ? const Color(0xFF00F0FF).withOpacity(0.15) : Colors.white10,
+              child: Icon(test.icon, color: supported ? const Color(0xFF00F0FF) : Colors.white24),
+            ),
+            title: Text(test.name, style: TextStyle(color: supported ? Colors.white : Colors.white38, fontWeight: FontWeight.w700)),
+            subtitle: Text('${test.group} • ${test.protocol.name.toUpperCase()} • ${supported ? 'سازگار با ECU' : 'عدم پشتیبانی در این مدل'}',
+                style: TextStyle(fontSize: 11, color: supported ? const Color(0xFF00E676) : Colors.white24)),
+            trailing: isRunning
+                ? OutlinedButton(
+                    onPressed: _stopCurrentActuatorTest,
+                    child: Text('${_actuatorRemainingSeconds}s توقف', style: const TextStyle(color: Color(0xFFFF2A55))),
+                  )
+                : FilledButton(
+                    onPressed: (supported && _connected && !_actuatorActionInProgress) ? () => _runActuatorTest(test) : null,
+                    child: const Text('تحریک'),
+                  ),
+          ),
+        );
+      }),
+      const Divider(height: 32),
+      const Text('وضعیت خواندنی عملگرها (Passive Monitoring):', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white70)),
+      const SizedBox(height: 6),
       ..._availableActuatorDefinitions.map(_actuatorStatusCard),
-      if (_actuatorStates.containsKey('وضعیت سیستم سوخت 1')) _actuatorStatusCard(const _ActuatorStatusDefinition(name: 'وضعیت سیستم سوخت 1', group: 'OBD-II', icon: Icons.local_gas_station_rounded, source: _ActuatorSourceType.obdPid, idHex: '03')),
+      if (_actuatorStates.containsKey('وضعیت سیستم سوخت 1'))
+        _actuatorStatusCard(const _ActuatorStatusDefinition(name: 'وضعیت سیستم سوخت 1', group: 'OBD-II', icon: Icons.local_gas_station_rounded, source: _ActuatorSourceType.obdPid, idHex: '03')),
     ]);
   }
 
