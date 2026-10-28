@@ -58,7 +58,7 @@ class RasaLicenseGatekeeper extends StatefulWidget {
 }
 
 class _RasaLicenseGatekeeperState extends State<RasaLicenseGatekeeper> {
-  String _deviceId = 'در حال استخراج...';
+  String _deviceId = 'Ø¯Ø± Ø­Ø§Ù„ Ø§Ø³ØªØ®Ø±Ø§Ø¬...';
   bool _checking = true;
 
   @override
@@ -100,19 +100,19 @@ class _RasaLicenseGatekeeperState extends State<RasaLicenseGatekeeper> {
       context: context,
       barrierDismissible: false,
       builder: (_) => AlertDialog(
-        title: const Text('فعال‌سازی RASA DIAG'),
+        title: const Text('ÙØ¹Ø§Ù„â€ŒØ³Ø§Ø²ÛŒ RASA DIAG'),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text('شناسه دستگاه:'),
+          const Text('Ø´Ù†Ø§Ø³Ù‡ Ø¯Ø³ØªÚ¯Ø§Ù‡:'),
           const SizedBox(height: 8),
           SelectableText(_deviceId, style: const TextStyle(color: Color(0xFF00F0FF))),
           const SizedBox(height: 16),
           TextField(
             controller: c,
-            decoration: const InputDecoration(labelText: 'کلید فعال‌سازی'),
+            decoration: const InputDecoration(labelText: 'Ú©Ù„ÛŒØ¯ ÙØ¹Ø§Ù„â€ŒØ³Ø§Ø²ÛŒ'),
           ),
         ]),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('بعداً')),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Ø¨Ø¹Ø¯Ø§Ù‹')),
           FilledButton(
             onPressed: () async {
               if (c.text.trim().length < 8) return;
@@ -123,7 +123,7 @@ class _RasaLicenseGatekeeperState extends State<RasaLicenseGatekeeper> {
                 _openApp();
               }
             },
-            child: const Text('فعال‌سازی'),
+            child: const Text('ÙØ¹Ø§Ù„â€ŒØ³Ø§Ø²ÛŒ'),
           ),
         ],
       ),
@@ -207,22 +207,22 @@ const ecuProfiles = <EcuProfile>[
 ];
 
 const dtcDescriptions = <String, String>{
-  'P0100': 'مدار سنسور جریان هوای جرمی (MAF)',
-  'P0105': 'مدار سنسور فشار منیفولد (MAP)',
-  'P0110': 'مدار سنسور دمای هوای ورودی (IAT)',
-  'P0115': 'مدار سنسور دمای مایع خنک‌کننده (ECT)',
-  'P0120': 'مدار موقعیت دریچه گاز (TPS)',
-  'P0130': 'مدار سنسور اکسیژن Bank 1 Sensor 1',
-  'P0136': 'مدار سنسور اکسیژن Bank 1 Sensor 2',
-  'P0200': 'مدار انژکتورها',
-  'P0300': 'احتراق ناقص تصادفی',
-  'P0335': 'سنسور موقعیت میل‌لنگ',
-  'P0340': 'سنسور موقعیت میل‌سوپاپ',
-  'P0420': 'راندمان کاتالیست پایین',
-  'P0443': 'شیر برقی EVAP',
-  'P0500': 'سنسور سرعت خودرو',
-  'P0560': 'ولتاژ سیستم برق',
-  'P0606': 'پردازنده ECU',
+  'P0100': 'Ù…Ø¯Ø§Ø± Ø³Ù†Ø³ÙˆØ± Ø¬Ø±ÛŒØ§Ù† Ù‡ÙˆØ§ÛŒ Ø¬Ø±Ù…ÛŒ (MAF)',
+  'P0105': 'Ù…Ø¯Ø§Ø± Ø³Ù†Ø³ÙˆØ± ÙØ´Ø§Ø± Ù…Ù†ÛŒÙÙˆÙ„Ø¯ (MAP)',
+  'P0110': 'Ù…Ø¯Ø§Ø± Ø³Ù†Ø³ÙˆØ± Ø¯Ù…Ø§ÛŒ Ù‡ÙˆØ§ÛŒ ÙˆØ±ÙˆØ¯ÛŒ (IAT)',
+  'P0115': 'Ù…Ø¯Ø§Ø± Ø³Ù†Ø³ÙˆØ± Ø¯Ù…Ø§ÛŒ Ù…Ø§ÛŒØ¹ Ø®Ù†Ú©â€ŒÚ©Ù†Ù†Ø¯Ù‡ (ECT)',
+  'P0120': 'Ù…Ø¯Ø§Ø± Ù…ÙˆÙ‚Ø¹ÛŒØª Ø¯Ø±ÛŒÚ†Ù‡ Ú¯Ø§Ø² (TPS)',
+  'P0130': 'Ù…Ø¯Ø§Ø± Ø³Ù†Ø³ÙˆØ± Ø§Ú©Ø³ÛŒÚ˜Ù† Bank 1 Sensor 1',
+  'P0136': 'Ù…Ø¯Ø§Ø± Ø³Ù†Ø³ÙˆØ± Ø§Ú©Ø³ÛŒÚ˜Ù† Bank 1 Sensor 2',
+  'P0200': 'Ù…Ø¯Ø§Ø± Ø§Ù†Ú˜Ú©ØªÙˆØ±Ù‡Ø§',
+  'P0300': 'Ø§Ø­ØªØ±Ø§Ù‚ Ù†Ø§Ù‚Øµ ØªØµØ§Ø¯ÙÛŒ',
+  'P0335': 'Ø³Ù†Ø³ÙˆØ± Ù…ÙˆÙ‚Ø¹ÛŒØª Ù…ÛŒÙ„â€ŒÙ„Ù†Ú¯',
+  'P0340': 'Ø³Ù†Ø³ÙˆØ± Ù…ÙˆÙ‚Ø¹ÛŒØª Ù…ÛŒÙ„â€ŒØ³ÙˆÙ¾Ø§Ù¾',
+  'P0420': 'Ø±Ø§Ù†Ø¯Ù…Ø§Ù† Ú©Ø§ØªØ§Ù„ÛŒØ³Øª Ù¾Ø§ÛŒÛŒÙ†',
+  'P0443': 'Ø´ÛŒØ± Ø¨Ø±Ù‚ÛŒ EVAP',
+  'P0500': 'Ø³Ù†Ø³ÙˆØ± Ø³Ø±Ø¹Øª Ø®ÙˆØ¯Ø±Ùˆ',
+  'P0560': 'ÙˆÙ„ØªØ§Ú˜ Ø³ÛŒØ³ØªÙ… Ø¨Ø±Ù‚',
+  'P0606': 'Ù¾Ø±Ø¯Ø§Ø²Ù†Ø¯Ù‡ ECU',
 };
 
 enum EcuConfidence { verified, partial, traceRequired }
@@ -263,7 +263,7 @@ class EcuDatabaseEntry {
   });
 
   String get title => '$ecuManufacturer $ecuModel';
-  String get confidenceText => confidence == EcuConfidence.verified ? 'تأییدشده' : confidence == EcuConfidence.partial ? 'تأیید خانواده / نیازمند Trace' : 'نیازمند Trace';
+  String get confidenceText => confidence == EcuConfidence.verified ? 'ØªØ£ÛŒÛŒØ¯Ø´Ø¯Ù‡' : confidence == EcuConfidence.partial ? 'ØªØ£ÛŒÛŒØ¯ Ø®Ø§Ù†ÙˆØ§Ø¯Ù‡ / Ù†ÛŒØ§Ø²Ù…Ù†Ø¯ Trace' : 'Ù†ÛŒØ§Ø²Ù…Ù†Ø¯ Trace';
 }
 
 const rasaEcuDatabase = <EcuDatabaseEntry>[
@@ -352,7 +352,7 @@ const List<OdometerDefinition> verifiedOdometerDefinitions = <OdometerDefinition
     dataLength: 3,
     scale: 1.0,
     unit: 'KM',
-    verification: 'تأییدشده با استاندارد Bosch ME7.4.9',
+    verification: 'ØªØ£ÛŒÛŒØ¯Ø´Ø¯Ù‡ Ø¨Ø§ Ø§Ø³ØªØ§Ù†Ø¯Ø§Ø±Ø¯ Bosch ME7.4.9',
   ),
   OdometerDefinition(
     id: 'CHERY-UDS-ODOMETER',
@@ -364,7 +364,7 @@ const List<OdometerDefinition> verifiedOdometerDefinitions = <OdometerDefinition
     dataLength: 4,
     scale: 0.1,
     unit: 'KM',
-    verification: 'تأییدشده برای شبکه CAN خانواده چری و ام‌وی‌ام',
+    verification: 'ØªØ£ÛŒÛŒØ¯Ø´Ø¯Ù‡ Ø¨Ø±Ø§ÛŒ Ø´Ø¨Ú©Ù‡ CAN Ø®Ø§Ù†ÙˆØ§Ø¯Ù‡ Ú†Ø±ÛŒ Ùˆ Ø§Ù…â€ŒÙˆÛŒâ€ŒØ§Ù…',
   ),
   OdometerDefinition(
     id: 'GENERIC-OBD-PID-A6',
@@ -376,7 +376,7 @@ const List<OdometerDefinition> verifiedOdometerDefinitions = <OdometerDefinition
     dataLength: 4,
     scale: 0.1,
     unit: 'KM',
-    verification: 'استاندارد SAE J1979 OBD-II Mode 01 PID A6',
+    verification: 'Ø§Ø³ØªØ§Ù†Ø¯Ø§Ø±Ø¯ SAE J1979 OBD-II Mode 01 PID A6',
   ),
 ];
 
@@ -409,8 +409,8 @@ class ActuatorTestDefinition {
 const List<ActuatorTestDefinition> verifiedActuatorTests = [
   ActuatorTestDefinition(
     id: 'FAN_LOW_BOSCH',
-    name: 'فن خنک‌کننده (دور کند)',
-    group: 'خنک‌کاری',
+    name: 'ÙÙ† Ø®Ù†Ú©â€ŒÚ©Ù†Ù†Ø¯Ù‡ (Ø¯ÙˆØ± Ú©Ù†Ø¯)',
+    group: 'Ø®Ù†Ú©â€ŒÚ©Ø§Ø±ÛŒ',
     icon: Icons.air_rounded,
     protocol: ActuatorProtocolType.uds,
     supportedEcuFamilies: ['IKCO-DENA-EF7-ME749', 'CHERY-MVM-UDS-CAN', 'JAC-S5-DELPHI-MT80'],
@@ -420,8 +420,8 @@ const List<ActuatorTestDefinition> verifiedActuatorTests = [
   ),
   ActuatorTestDefinition(
     id: 'FAN_HIGH_BOSCH',
-    name: 'فن خنک‌کننده (دور تند)',
-    group: 'خنک‌کاری',
+    name: 'ÙÙ† Ø®Ù†Ú©â€ŒÚ©Ù†Ù†Ø¯Ù‡ (Ø¯ÙˆØ± ØªÙ†Ø¯)',
+    group: 'Ø®Ù†Ú©â€ŒÚ©Ø§Ø±ÛŒ',
     icon: Icons.air_rounded,
     protocol: ActuatorProtocolType.uds,
     supportedEcuFamilies: ['IKCO-DENA-EF7-ME749', 'CHERY-MVM-UDS-CAN', 'JAC-S5-DELPHI-MT80'],
@@ -431,8 +431,8 @@ const List<ActuatorTestDefinition> verifiedActuatorTests = [
   ),
   ActuatorTestDefinition(
     id: 'FUEL_PUMP_BOSCH',
-    name: 'رله پمپ بنزین',
-    group: 'سوخت‌رسانی',
+    name: 'Ø±Ù„Ù‡ Ù¾Ù…Ù¾ Ø¨Ù†Ø²ÛŒÙ†',
+    group: 'Ø³ÙˆØ®Øªâ€ŒØ±Ø³Ø§Ù†ÛŒ',
     icon: Icons.local_gas_station_rounded,
     protocol: ActuatorProtocolType.uds,
     supportedEcuFamilies: ['IKCO-DENA-EF7-ME749', 'CHERY-MVM-UDS-CAN'],
@@ -442,8 +442,8 @@ const List<ActuatorTestDefinition> verifiedActuatorTests = [
   ),
   ActuatorTestDefinition(
     id: 'EVAP_CANISTER',
-    name: 'شیر برقی کنیستر',
-    group: 'هوا / آلایندگی',
+    name: 'Ø´ÛŒØ± Ø¨Ø±Ù‚ÛŒ Ú©Ù†ÛŒØ³ØªØ±',
+    group: 'Ù‡ÙˆØ§ / Ø¢Ù„Ø§ÛŒÙ†Ø¯Ú¯ÛŒ',
     icon: Icons.filter_alt_rounded,
     protocol: ActuatorProtocolType.uds,
     supportedEcuFamilies: ['IKCO-DENA-EF7-ME749'],
@@ -453,8 +453,8 @@ const List<ActuatorTestDefinition> verifiedActuatorTests = [
   ),
   ActuatorTestDefinition(
     id: 'INJECTOR_1_KWP',
-    name: 'انژکتور ۱ (قطع پاشش/تحریک)',
-    group: 'سوخت‌رسانی',
+    name: 'Ø§Ù†Ú˜Ú©ØªÙˆØ± Û± (Ù‚Ø·Ø¹ Ù¾Ø§Ø´Ø´/ØªØ­Ø±ÛŒÚ©)',
+    group: 'Ø³ÙˆØ®Øªâ€ŒØ±Ø³Ø§Ù†ÛŒ',
     icon: Icons.water_drop_rounded,
     protocol: ActuatorProtocolType.kwp,
     supportedEcuFamilies: ['IKCO-206-TU5-ME744', 'IKCO-206-SAGEM-S2000'],
@@ -594,18 +594,18 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
   EcuDatabaseEntry? _matchedEcu;
   final List<EcuDatabaseEntry> _dbMatches = [];
   final List<String> _discoveryTrace = [];
-  String _databaseStatus = 'هنوز تطبیق ECU انجام نشده است';
+  String _databaseStatus = 'Ù‡Ù†ÙˆØ² ØªØ·Ø¨ÛŒÙ‚ ECU Ø§Ù†Ø¬Ø§Ù… Ù†Ø´Ø¯Ù‡ Ø§Ø³Øª';
   bool _databaseScanning = false;
   String _hwId = '---';
   String _swId = '---';
   String _protocol = 'Unknown';
   String _protocolCode = '0';
   bool _protocolScanRunning = false;
-  String _ecuModel = 'شناسایی نشده';
+  String _ecuModel = 'Ø´Ù†Ø§Ø³Ø§ÛŒÛŒ Ù†Ø´Ø¯Ù‡';
   String _ecuSoftware = '---';
   String _vin = '---';
   String _adapterInfo = '---';
-  String _connectionStatus = 'آماده اتصال';
+  String _connectionStatus = 'Ø¢Ù…Ø§Ø¯Ù‡ Ø§ØªØµØ§Ù„';
   String _udsRequestHeader = '';
   String _udsResponseHeader = '';
   String _discoveryMethod = '---';
@@ -613,7 +613,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
 
   int _rpm = 0, _speed = 0, _coolant = 0, _throttle = 0, _engineLoad = 0, _iat = 0;
   double _voltage = 0, _o2 = 0, _odometer = 0, _fuelLevel = -1, _map = -1, _maf = -1, _ambient = -100;
-  String _odometerStatus = 'استعلام نشده';
+  String _odometerStatus = 'Ø§Ø³ØªØ¹Ù„Ø§Ù… Ù†Ø´Ø¯Ù‡';
   bool _loadingDtc = false;
   bool _clearingDtc = false;
   int _pollIndex = 0;
@@ -634,8 +634,8 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
   Timer? _remoteHeartbeat;
   bool _remoteConnected = false;
   bool _remoteConnecting = false;
-  String _remoteStatus = 'قطع ارتباط';
-  String _remoteRoleLabel = 'انتخاب نشده';
+  String _remoteStatus = 'Ù‚Ø·Ø¹ Ø§Ø±ØªØ¨Ø§Ø·';
+  String _remoteRoleLabel = 'Ø§Ù†ØªØ®Ø§Ø¨ Ù†Ø´Ø¯Ù‡';
   String _customerSessionCode = '';
   _RasaCustomization _custom = const _RasaCustomization();
   Color _accent = const Color(0xFF00F0FF);
@@ -669,14 +669,14 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
 
   Future<void> _selectBluetoothDevice() async {
     if (!await _requestBluetoothPermissions()) {
-      _snack('مجوزهای لازم بلوتوث صادر نشده است.');
+      _snack('Ù…Ø¬ÙˆØ²Ù‡Ø§ÛŒ Ù„Ø§Ø²Ù… Ø¨Ù„ÙˆØªÙˆØ« ØµØ§Ø¯Ø± Ù†Ø´Ø¯Ù‡ Ø§Ø³Øª.');
       return;
     }
     List<BluetoothDevice> devices;
     try {
       devices = await FlutterBluetoothSerial.instance.getBondedDevices();
     } catch (e) {
-      _snack('خطای دسترسی به بلوتوث: $e');
+      _snack('Ø®Ø·Ø§ÛŒ Ø¯Ø³ØªØ±Ø³ÛŒ Ø¨Ù‡ Ø¨Ù„ÙˆØªÙˆØ«: $e');
       return;
     }
     if (!mounted) return;
@@ -687,7 +687,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
         child: SizedBox(
           height: min(MediaQuery.of(context).size.height * .65, 560),
           child: devices.isEmpty
-              ? const Center(child: Text('دانگل Pair شده‌ای پیدا نشد.'))
+              ? const Center(child: Text('Ø¯Ø§Ù†Ú¯Ù„ Pair Ø´Ø¯Ù‡â€ŒØ§ÛŒ Ù¾ÛŒØ¯Ø§ Ù†Ø´Ø¯.'))
               : ListView.builder(
                   padding: const EdgeInsets.all(12),
                   itemCount: devices.length,
@@ -712,7 +712,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     await _disconnect();
     setState(() {
       _connecting = true;
-      _connectionStatus = 'در حال اتصال به ${device.name ?? device.address}';
+      _connectionStatus = 'Ø¯Ø± Ø­Ø§Ù„ Ø§ØªØµØ§Ù„ Ø¨Ù‡ ${device.name ?? device.address}';
     });
     try {
       final c = await BluetoothConnection.toAddress(device.address);
@@ -723,7 +723,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       setState(() {
         _connected = true;
         _connecting = false;
-        _connectionStatus = 'دانگل متصل؛ در حال شناسایی ECU';
+        _connectionStatus = 'Ø¯Ø§Ù†Ú¯Ù„ Ù…ØªØµÙ„Ø› Ø¯Ø± Ø­Ø§Ù„ Ø´Ù†Ø§Ø³Ø§ÛŒÛŒ ECU';
       });
       _log('CONNECTED ${device.name ?? device.address}');
       await _initializeAdapter();
@@ -733,9 +733,9 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       setState(() {
         _connecting = false;
         _connected = false;
-        _connectionStatus = 'خطا در اتصال';
+        _connectionStatus = 'Ø®Ø·Ø§ Ø¯Ø± Ø§ØªØµØ§Ù„';
       });
-      _snack('اتصال ناموفق: $e');
+      _snack('Ø§ØªØµØ§Ù„ Ù†Ø§Ù…ÙˆÙÙ‚: $e');
     }
   }
 
@@ -788,7 +788,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     if (!_connected || _protocolScanRunning) return;
     _protocolScanRunning = true;
     _pollTimer?.cancel();
-    if (mounted) setState(() => _connectionStatus = 'در حال اسکن پروتکل‌های ارتباطی...');
+    if (mounted) setState(() => _connectionStatus = 'Ø¯Ø± Ø­Ø§Ù„ Ø§Ø³Ú©Ù† Ù¾Ø±ÙˆØªÚ©Ù„â€ŒÙ‡Ø§ÛŒ Ø§Ø±ØªØ¨Ø§Ø·ÛŒ...');
     try {
       for (final candidate in elmProtocolCandidates.skip(1)) {
         if (!_connected) break;
@@ -817,7 +817,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       }
     } finally {
       _protocolScanRunning = false;
-      if (mounted) setState(() => _connectionStatus = 'پروتکل: $_protocol');
+      if (mounted) setState(() => _connectionStatus = 'Ù¾Ø±ÙˆØªÚ©Ù„: $_protocol');
     }
   }
 
@@ -847,12 +847,12 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     _pollTimer?.cancel();
     final db = rasaEcuDatabase.where((e) => p.title.toUpperCase().contains(e.ecuModel.toUpperCase()) || p.model.toUpperCase().contains(e.ecuModel.toUpperCase())).toList();
     _matchedEcu = db.isEmpty ? null : db.first;
-    _databaseStatus = _matchedEcu == null ? 'پروفایل عمومی؛ نیازمند Trace' : '${_matchedEcu!.title} • ${_matchedEcu!.confidenceText}';
+    _databaseStatus = _matchedEcu == null ? 'Ù¾Ø±ÙˆÙØ§ÛŒÙ„ Ø¹Ù…ÙˆÙ…ÛŒØ› Ù†ÛŒØ§Ø²Ù…Ù†Ø¯ Trace' : '${_matchedEcu!.title} â€¢ ${_matchedEcu!.confidenceText}';
     setState(() {
       _profile = p;
       _supportsOdometer = false;
       _odometer = 0;
-      _odometerStatus = 'استعلام نشده';
+      _odometerStatus = 'Ø§Ø³ØªØ¹Ù„Ø§Ù… Ù†Ø´Ø¯Ù‡';
     });
     final candidate = p.protocol == 'OBD-II'
         ? elmProtocolCandidates.first
@@ -871,7 +871,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     return EcuProfile(
       manufacturer: e.ecuManufacturer,
       model: e.ecuModel,
-      family: '${e.vehicleFamily} • ${e.model}',
+      family: '${e.vehicleFamily} â€¢ ${e.model}',
       protocol: p,
       header: e.requestHeader == null ? null : 'ATSH ${e.requestHeader}',
       functionalHeader: 'ATSH 7DF',
@@ -903,10 +903,10 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     if (scored.isNotEmpty) {
       _matchedEcu = scored.first.value;
       _profile = _profileFromDatabase(_matchedEcu!);
-      _databaseStatus = '${_matchedEcu!.title} • ${_matchedEcu!.confidenceText}';
+      _databaseStatus = '${_matchedEcu!.title} â€¢ ${_matchedEcu!.confidenceText}';
     } else {
       _matchedEcu = null;
-      _databaseStatus = 'تطبیق دقیق پیدا نشد؛ Discovery/Trace لازم است';
+      _databaseStatus = 'ØªØ·Ø¨ÛŒÙ‚ Ø¯Ù‚ÛŒÙ‚ Ù¾ÛŒØ¯Ø§ Ù†Ø´Ø¯Ø› Discovery/Trace Ù„Ø§Ø²Ù… Ø§Ø³Øª';
     }
   }
 
@@ -985,7 +985,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     if (!_connected || _databaseScanning) return;
     _databaseScanning = true;
     _pollTimer?.cancel();
-    if (mounted) setState(() => _databaseStatus = 'در حال Discovery و تطبیق با بانک ECU...');
+    if (mounted) setState(() => _databaseStatus = 'Ø¯Ø± Ø­Ø§Ù„ Discovery Ùˆ ØªØ·Ø¨ÛŒÙ‚ Ø¨Ø§ Ø¨Ø§Ù†Ú© ECU...');
     try {
       _discoveryTrace.clear();
       _hwId = '---';
@@ -1029,15 +1029,15 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     old.add(record);
     while (old.length > 50) old.removeAt(0);
     await prefs.setStringList('rasa_ecu_traces', old);
-    _snack('Trace ECU ذخیره شد.');
+    _snack('Trace ECU Ø°Ø®ÛŒØ±Ù‡ Ø´Ø¯.');
   }
 
   Future<void> _identifyVehicle() async {
     if (!_connected || _scanInProgress) return;
     setState(() {
       _scanInProgress = true;
-      _connectionStatus = 'در حال شناسایی ECU';
-      _ecuModel = 'در حال شناسایی...';
+      _connectionStatus = 'Ø¯Ø± Ø­Ø§Ù„ Ø´Ù†Ø§Ø³Ø§ÛŒÛŒ ECU';
+      _ecuModel = 'Ø¯Ø± Ø­Ø§Ù„ Ø´Ù†Ø§Ø³Ø§ÛŒÛŒ...';
       _vin = '---';
       _ecuSoftware = '---';
     });
@@ -1059,9 +1059,9 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       }
       final rpm = await _sendAndWait('010C', timeout: const Duration(seconds: 2));
       if (_parsePid(rpm, '0C') != null) {
-        _ecuModel = _ecuModel == 'در حال شناسایی...' || _ecuModel == 'شناسایی نشده' ? 'ECU OBD-II' : _ecuModel;
+        _ecuModel = _ecuModel == 'Ø¯Ø± Ø­Ø§Ù„ Ø´Ù†Ø§Ø³Ø§ÛŒÛŒ...' || _ecuModel == 'Ø´Ù†Ø§Ø³Ø§ÛŒÛŒ Ù†Ø´Ø¯Ù‡' ? 'ECU OBD-II' : _ecuModel;
       }
-      _ecuSoftware = 'از ECU عمومی قابل تشخیص نیست';
+      _ecuSoftware = 'Ø§Ø² ECU Ø¹Ù…ÙˆÙ…ÛŒ Ù‚Ø§Ø¨Ù„ ØªØ´Ø®ÛŒØµ Ù†ÛŒØ³Øª';
       if (_profile.protocol.contains('UDS') || _profile.protocol.contains('CAN')) {
         try {
           await _sendAndWait('ATCAF1', timeout: const Duration(seconds: 1));
@@ -1075,11 +1075,11 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
         }
       }
       _rankDatabaseMatches(ecuText: name, vinText: vinText);
-      _connectionStatus = 'ECU پاسخ‌گو • $_databaseStatus';
+      _connectionStatus = 'ECU Ù¾Ø§Ø³Ø®â€ŒÚ¯Ùˆ â€¢ $_databaseStatus';
     } catch (e) {
       _log('IDENTIFY ERROR $e');
-      _ecuModel = 'شناسایی ناموفق';
-      _connectionStatus = 'دانگل متصل / ECU نامشخص';
+      _ecuModel = 'Ø´Ù†Ø§Ø³Ø§ÛŒÛŒ Ù†Ø§Ù…ÙˆÙÙ‚';
+      _connectionStatus = 'Ø¯Ø§Ù†Ú¯Ù„ Ù…ØªØµÙ„ / ECU Ù†Ø§Ù…Ø´Ø®Øµ';
     } finally {
       if (mounted) setState(() => _scanInProgress = false);
     }
@@ -1145,7 +1145,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
 
   Future<void> _sendManual(String command) async {
     if (!_connected) {
-      _snack('ابتدا به دانگل متصل شوید.');
+      _snack('Ø§Ø¨ØªØ¯Ø§ Ø¨Ù‡ Ø¯Ø§Ù†Ú¯Ù„ Ù…ØªØµÙ„ Ø´ÙˆÛŒØ¯.');
       return;
     }
     final response = await _sendAndWait(command.trim().toUpperCase(), timeout: const Duration(seconds: 3), logCommand: true);
@@ -1303,7 +1303,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
 
   Future<void> _scanDtc() async {
     if (!_connected) {
-      _snack('ابتدا اتصال ECU را برقرار کنید.');
+      _snack('Ø§Ø¨ØªØ¯Ø§ Ø§ØªØµØ§Ù„ ECU Ø±Ø§ Ø¨Ø±Ù‚Ø±Ø§Ø± Ú©Ù†ÛŒØ¯.');
       return;
     }
     _pollTimer?.cancel();
@@ -1359,11 +1359,11 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('تأیید پاک‌سازی خطا'),
-        content: const Text('پاک کردن DTC یک عملیات تغییردهنده است و ممکن است مانیتورهای OBD را Reset کند. ادامه می‌دهید؟'),
+        title: const Text('ØªØ£ÛŒÛŒØ¯ Ù¾Ø§Ú©â€ŒØ³Ø§Ø²ÛŒ Ø®Ø·Ø§'),
+        content: const Text('Ù¾Ø§Ú© Ú©Ø±Ø¯Ù† DTC ÛŒÚ© Ø¹Ù…Ù„ÛŒØ§Øª ØªØºÛŒÛŒØ±Ø¯Ù‡Ù†Ø¯Ù‡ Ø§Ø³Øª Ùˆ Ù…Ù…Ú©Ù† Ø§Ø³Øª Ù…Ø§Ù†ÛŒØªÙˆØ±Ù‡Ø§ÛŒ OBD Ø±Ø§ Reset Ú©Ù†Ø¯. Ø§Ø¯Ø§Ù…Ù‡ Ù…ÛŒâ€ŒØ¯Ù‡ÛŒØ¯ØŸ'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('انصراف')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('پاک کن')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Ø§Ù†ØµØ±Ø§Ù')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Ù¾Ø§Ú© Ú©Ù†')),
         ],
       ),
     );
@@ -1398,12 +1398,12 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
 
   Future<void> _readOdometer() async {
     if (!_connected) {
-      _snack('ابتدا اتصال به دانگل و ECU را برقرار کنید.');
+      _snack('Ø§Ø¨ØªØ¯Ø§ Ø§ØªØµØ§Ù„ Ø¨Ù‡ Ø¯Ø§Ù†Ú¯Ù„ Ùˆ ECU Ø±Ø§ Ø¨Ø±Ù‚Ø±Ø§Ø± Ú©Ù†ÛŒØ¯.');
       return;
     }
 
     _pollTimer?.cancel();
-    setState(() => _odometerStatus = 'در حال استعلام کارکرد از ECU...');
+    setState(() => _odometerStatus = 'Ø¯Ø± Ø­Ø§Ù„ Ø§Ø³ØªØ¹Ù„Ø§Ù… Ú©Ø§Ø±Ú©Ø±Ø¯ Ø§Ø² ECU...');
 
     try {
       final def = _findOdometerDefinition();
@@ -1420,7 +1420,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
 
           if (def.sessionHex.isNotEmpty) {
             final sr = await _udsRequest(def.sessionHex);
-            if (!_udsPositive(sr, def.sessionHex)) throw Exception('عدم پذیرش سشن عیب‌یابی');
+            if (!_udsPositive(sr, def.sessionHex)) throw Exception('Ø¹Ø¯Ù… Ù¾Ø°ÛŒØ±Ø´ Ø³Ø´Ù† Ø¹ÛŒØ¨â€ŒÛŒØ§Ø¨ÛŒ');
           }
 
           final r = await _udsRequest('${def.serviceHex}${def.didHex}', timeout: const Duration(seconds: 3));
@@ -1456,13 +1456,13 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       setState(() {
         _supportsOdometer = false;
         _odometer = 0;
-        _odometerStatus = 'این ECU دسترسی مستقیم به کیلومتر را ارائه نمی‌دهد';
+        _odometerStatus = 'Ø§ÛŒÙ† ECU Ø¯Ø³ØªØ±Ø³ÛŒ Ù…Ø³ØªÙ‚ÛŒÙ… Ø¨Ù‡ Ú©ÛŒÙ„ÙˆÙ…ØªØ± Ø±Ø§ Ø§Ø±Ø§Ø¦Ù‡ Ù†Ù…ÛŒâ€ŒØ¯Ù‡Ø¯';
       });
       _log('ODOMETER: NOT SUPPORTED BY ECU');
     } catch (e) {
       setState(() {
         _supportsOdometer = false;
-        _odometerStatus = 'خطا در خواندن: ${e.toString().replaceAll('Exception: ', '')}';
+        _odometerStatus = 'Ø®Ø·Ø§ Ø¯Ø± Ø®ÙˆØ§Ù†Ø¯Ù†: ${e.toString().replaceAll('Exception: ', '')}';
       });
       _log('ODOMETER ERROR: $e');
     } finally {
@@ -1648,17 +1648,17 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
 
   Future<void> _runActuatorTest(ActuatorTestDefinition test) async {
     if (!_connected) {
-      _snack('ابتدا اتصال به ECU را برقرار کنید.');
+      _snack('Ø§Ø¨ØªØ¯Ø§ Ø§ØªØµØ§Ù„ Ø¨Ù‡ ECU Ø±Ø§ Ø¨Ø±Ù‚Ø±Ø§Ø± Ú©Ù†ÛŒØ¯.');
       return;
     }
 
     if (_rpm > 0) {
-      _snack('خطای ایمنی: تست عملگر تنها با موتور خاموش و سوئیچ باز مجاز است.');
+      _snack('Ø®Ø·Ø§ÛŒ Ø§ÛŒÙ…Ù†ÛŒ: ØªØ³Øª Ø¹Ù…Ù„Ú¯Ø± ØªÙ†Ù‡Ø§ Ø¨Ø§ Ù…ÙˆØªÙˆØ± Ø®Ø§Ù…ÙˆØ´ Ùˆ Ø³ÙˆØ¦ÛŒÚ† Ø¨Ø§Ø² Ù…Ø¬Ø§Ø² Ø§Ø³Øª.');
       return;
     }
 
     if (_speed > 0) {
-      _snack('خطای ایمنی: سرعت خودرو صفر نیست.');
+      _snack('Ø®Ø·Ø§ÛŒ Ø§ÛŒÙ…Ù†ÛŒ: Ø³Ø±Ø¹Øª Ø®ÙˆØ¯Ø±Ùˆ ØµÙØ± Ù†ÛŒØ³Øª.');
       return;
     }
 
@@ -1678,22 +1678,22 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       if (test.protocol == ActuatorProtocolType.uds) {
         final sessionResp = await _udsRequest('1003', timeout: const Duration(seconds: 2));
         if (!_udsPositive(sessionResp, '1003')) {
-          throw Exception('ECU اجازه ورود به Extended Session ($sessionResp) را نداد.');
+          throw Exception('ECU Ø§Ø¬Ø§Ø²Ù‡ ÙˆØ±ÙˆØ¯ Ø¨Ù‡ Extended Session ($sessionResp) Ø±Ø§ Ù†Ø¯Ø§Ø¯.');
         }
 
         final testResp = await _udsRequest(test.startHex, timeout: const Duration(seconds: 3));
         if (!_udsPositive(testResp, test.startHex)) {
-          throw Exception('فرمان فعال‌سازی رد شد: $testResp');
+          throw Exception('ÙØ±Ù…Ø§Ù† ÙØ¹Ø§Ù„â€ŒØ³Ø§Ø²ÛŒ Ø±Ø¯ Ø´Ø¯: $testResp');
         }
       } else {
         final r = await _sendAndWait(test.startHex, timeout: const Duration(seconds: 3), logCommand: true);
         if (r.isEmpty || r.contains('7F')) {
-          throw Exception('پاسخ منفی در پروتکل KWP: $r');
+          throw Exception('Ù¾Ø§Ø³Ø® Ù…Ù†ÙÛŒ Ø¯Ø± Ù¾Ø±ÙˆØªÚ©Ù„ KWP: $r');
         }
       }
 
       _log('ACTUATOR TEST STARTED: ${test.name}');
-      _snack('تست ${test.name} آغاز شد.');
+      _snack('ØªØ³Øª ${test.name} Ø¢ØºØ§Ø² Ø´Ø¯.');
 
       _actuatorCountdownTimer?.cancel();
       _actuatorCountdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) async {
@@ -1708,7 +1708,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       });
     } catch (e) {
       _log('ACTUATOR ERROR: $e');
-      _snack('خطا در اجرای تست: $e');
+      _snack('Ø®Ø·Ø§ Ø¯Ø± Ø§Ø¬Ø±Ø§ÛŒ ØªØ³Øª: $e');
       await _stopCurrentActuatorTest();
     } finally {
       if (mounted) setState(() => _actuatorActionInProgress = false);
@@ -1757,7 +1757,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       setState(() {
         _connected = false;
         _connecting = false;
-        _connectionStatus = 'آماده اتصال';
+        _connectionStatus = 'Ø¢Ù…Ø§Ø¯Ù‡ Ø§ØªØµØ§Ù„';
         _udsRequestHeader = '';
         _udsResponseHeader = '';
         _discoveryMethod = '---';
@@ -1807,7 +1807,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     await p.setString('rasa_customization',jsonEncode(c.toJson()));
     _custom=c;
     if(mounted) setState((){});
-    _snack('شخصی‌سازی ذخیره شد');
+    _snack('Ø´Ø®ØµÛŒâ€ŒØ³Ø§Ø²ÛŒ Ø°Ø®ÛŒØ±Ù‡ Ø´Ø¯');
   }
 
   String _newSixDigitCode(){
@@ -1815,15 +1815,15 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     return (100000+r.nextInt(900000)).toString();
   }
 
-  // --- سیستم ریموت ساده‌شده بر پایه کد ۶ رقمی ---
+  // --- Ø³ÛŒØ³ØªÙ… Ø±ÛŒÙ…ÙˆØª Ø³Ø§Ø¯Ù‡â€ŒØ´Ø¯Ù‡ Ø¨Ø± Ù¾Ø§ÛŒÙ‡ Ú©Ø¯ Û¶ Ø±Ù‚Ù…ÛŒ ---
   Future<void> _startCustomerSession() async {
     if (!_connected) {
-      _snack('ابتدا دانگل بلوتوث را به خودرو متصل کنید.');
+      _snack('Ø§Ø¨ØªØ¯Ø§ Ø¯Ø§Ù†Ú¯Ù„ Ø¨Ù„ÙˆØªÙˆØ« Ø±Ø§ Ø¨Ù‡ Ø®ÙˆØ¯Ø±Ùˆ Ù…ØªØµÙ„ Ú©Ù†ÛŒØ¯.');
       return;
     }
     await _remoteClose();
     _customerSessionCode = _newSixDigitCode();
-    _remoteRoleLabel = 'مشتری (متصل به خودرو)';
+    _remoteRoleLabel = 'Ù…Ø´ØªØ±ÛŒ (Ù…ØªØµÙ„ Ø¨Ù‡ Ø®ÙˆØ¯Ø±Ùˆ)';
 
     setState(() => _remoteConnecting = true);
     const serverUrl = 'wss://api.rasadiag.ir/ws';
@@ -1839,12 +1839,12 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
 
       _remoteSocket = ws;
       _remoteConnected = true;
-      _remoteStatus = 'آماده اتصال پشتیبان';
+      _remoteStatus = 'Ø¢Ù…Ø§Ø¯Ù‡ Ø§ØªØµØ§Ù„ Ù¾Ø´ØªÛŒØ¨Ø§Ù†';
 
       _remoteSub = ws.listen((data) => _handleRemoteMessage(data.toString()), onDone: () {
-        if (mounted) setState(() { _remoteConnected = false; _remoteStatus = 'ارتباط قطع شد'; });
+        if (mounted) setState(() { _remoteConnected = false; _remoteStatus = 'Ø§Ø±ØªØ¨Ø§Ø· Ù‚Ø·Ø¹ Ø´Ø¯'; });
       }, onError: (_) {
-        if (mounted) setState(() { _remoteConnected = false; _remoteStatus = 'خطای ارتباطی'; });
+        if (mounted) setState(() { _remoteConnected = false; _remoteStatus = 'Ø®Ø·Ø§ÛŒ Ø§Ø±ØªØ¨Ø§Ø·ÛŒ'; });
       });
 
       ws.add(jsonEncode({'type': 'register_client', 'code': _customerSessionCode}));
@@ -1852,9 +1852,9 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
         if (_remoteConnected) _remoteSocket?.add(jsonEncode({'type': 'ping'}));
       });
 
-      _snack('کد ۶ رقمی ساخته شد. آن را برای پشتیبان ارسال کنید.');
+      _snack('Ú©Ø¯ Û¶ Ø±Ù‚Ù…ÛŒ Ø³Ø§Ø®ØªÙ‡ Ø´Ø¯. Ø¢Ù† Ø±Ø§ Ø¨Ø±Ø§ÛŒ Ù¾Ø´ØªÛŒØ¨Ø§Ù† Ø§Ø±Ø³Ø§Ù„ Ú©Ù†ÛŒØ¯.');
     } catch (e) {
-      _remoteStatus = 'خطا در اتصال به سرور: $e';
+      _remoteStatus = 'Ø®Ø·Ø§ Ø¯Ø± Ø§ØªØµØ§Ù„ Ø¨Ù‡ Ø³Ø±ÙˆØ±: $e';
     } finally {
       if (mounted) setState(() => _remoteConnecting = false);
     }
@@ -1863,11 +1863,11 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
   Future<void> _connectAsExpert() async {
     final code = _supportSessionCodeController.text.trim();
     if (code.length != 6) {
-      _snack('لطفاً کد ۶ رقمی مشتری را دقیق وارد کنید.');
+      _snack('Ù„Ø·ÙØ§Ù‹ Ú©Ø¯ Û¶ Ø±Ù‚Ù…ÛŒ Ù…Ø´ØªØ±ÛŒ Ø±Ø§ Ø¯Ù‚ÛŒÙ‚ ÙˆØ§Ø±Ø¯ Ú©Ù†ÛŒØ¯.');
       return;
     }
     await _remoteClose();
-    _remoteRoleLabel = 'پشتیبان فنی';
+    _remoteRoleLabel = 'Ù¾Ø´ØªÛŒØ¨Ø§Ù† ÙÙ†ÛŒ';
 
     setState(() => _remoteConnecting = true);
     const serverUrl = 'wss://api.rasadiag.ir/ws';
@@ -1883,12 +1883,12 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
 
       _remoteSocket = ws;
       _remoteConnected = true;
-      _remoteStatus = 'متصل به خودروی مشتری ($code)';
+      _remoteStatus = 'Ù…ØªØµÙ„ Ø¨Ù‡ Ø®ÙˆØ¯Ø±ÙˆÛŒ Ù…Ø´ØªØ±ÛŒ ($code)';
 
       _remoteSub = ws.listen((data) => _handleRemoteMessage(data.toString()), onDone: () {
-        if (mounted) setState(() { _remoteConnected = false; _remoteStatus = 'قطع ارتباط'; });
+        if (mounted) setState(() { _remoteConnected = false; _remoteStatus = 'Ù‚Ø·Ø¹ Ø§Ø±ØªØ¨Ø§Ø·'; });
       }, onError: (_) {
-        if (mounted) setState(() { _remoteConnected = false; _remoteStatus = 'خطای ارتباطی'; });
+        if (mounted) setState(() { _remoteConnected = false; _remoteStatus = 'Ø®Ø·Ø§ÛŒ Ø§Ø±ØªØ¨Ø§Ø·ÛŒ'; });
       });
 
       ws.add(jsonEncode({'type': 'join_expert', 'target_code': code}));
@@ -1896,9 +1896,9 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
         if (_remoteConnected) _remoteSocket?.add(jsonEncode({'type': 'ping'}));
       });
 
-      _snack('با موفقیت به دیاگ مشتری متصل شدید!');
+      _snack('Ø¨Ø§ Ù…ÙˆÙÙ‚ÛŒØª Ø¨Ù‡ Ø¯ÛŒØ§Ú¯ Ù…Ø´ØªØ±ÛŒ Ù…ØªØµÙ„ Ø´Ø¯ÛŒØ¯!');
     } catch (e) {
-      _remoteStatus = 'عدم اتصال به مشتری: $e';
+      _remoteStatus = 'Ø¹Ø¯Ù… Ø§ØªØµØ§Ù„ Ø¨Ù‡ Ù…Ø´ØªØ±ÛŒ: $e';
     } finally {
       if (mounted) setState(() => _remoteConnecting = false);
     }
@@ -1906,18 +1906,18 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
 
   void _sendRemoteDiagnostic(String cmd) {
     if (!_remoteConnected) {
-      _snack('ارتباط با سرور یا دیاگ مشتری متصل نیست.');
+      _snack('Ø§Ø±ØªØ¨Ø§Ø· Ø¨Ø§ Ø³Ø±ÙˆØ± ÛŒØ§ Ø¯ÛŒØ§Ú¯ Ù…Ø´ØªØ±ÛŒ Ù…ØªØµÙ„ Ù†ÛŒØ³Øª.');
       return;
     }
     _remoteSend({'type': 'diagnostic_request', 'command': cmd});
-    _log('REMOTE SENT → $cmd');
+    _log('REMOTE SENT â†’ $cmd');
   }
 
   void _handleRemoteMessage(String raw){
     try{
       final m=jsonDecode(raw); if(m is! Map)return;
       if(m['type']=='pong')return;
-      if(m['type']=='terminal' && m['data'] is String){_log('REMOTE ← ${m['data']}'); return;}
+      if(m['type']=='terminal' && m['data'] is String){_log('REMOTE â† ${m['data']}'); return;}
       if(m['type']=='diagnostic_result'){
         final ok=m['ok']==true;
         final command='${m['command']??''}';
@@ -1925,7 +1925,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
         _log('REMOTE RESULT [$command] $response');
         if(mounted)setState((){
           if(_remoteResults.length>=80)_remoteResults.removeAt(0);
-          _remoteResults.add('${ok ? '✓' : '✗'}  $command\n$response');
+          _remoteResults.add('${ok ? 'âœ“' : 'âœ—'}  $command\n$response');
         });
         return;
       }
@@ -1934,7 +1934,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
         _sendAndWait(m['command'].toString(),timeout:const Duration(seconds:3)).then((r)=>_remoteSend({'type':'diagnostic_result','ok':true,'command':m['command'],'response':r})).catchError((e)=>_remoteSend({'type':'diagnostic_result','ok':false,'error':'$e'}));
       }
       if(m['type']=='notice')_snack('${m['message']??''}');
-    }catch(_){_log('REMOTE ← $raw');}
+    }catch(_){_log('REMOTE â† $raw');}
   }
 
   void _remoteSend(Map<String,dynamic> message){if(_remoteConnected)_remoteSocket?.add(jsonEncode(message));}
@@ -1959,15 +1959,15 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
               size: 32,
             ),
             title: Text(
-              _remoteConnected ? 'اتصال ریموت فعال است' : 'مرکز پشتیبانی از راه دور',
+              _remoteConnected ? 'Ø§ØªØµØ§Ù„ Ø±ÛŒÙ…ÙˆØª ÙØ¹Ø§Ù„ Ø§Ø³Øª' : 'Ù…Ø±Ú©Ø² Ù¾Ø´ØªÛŒØ¨Ø§Ù†ÛŒ Ø§Ø² Ø±Ø§Ù‡ Ø¯ÙˆØ±',
               style: const TextStyle(fontWeight: FontWeight.w900),
             ),
-            subtitle: Text('وضعیت: $_remoteStatus • نقش: $_remoteRoleLabel'),
+            subtitle: Text('ÙˆØ¶Ø¹ÛŒØª: $_remoteStatus â€¢ Ù†Ù‚Ø´: $_remoteRoleLabel'),
             trailing: _remoteConnected
                 ? OutlinedButton(
                     onPressed: () { _remoteClose(); setState(() {}); },
                     style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFFF2A55)),
-                    child: const Text('قطع'),
+                    child: const Text('Ù‚Ø·Ø¹'),
                   )
                 : null,
           ),
@@ -1983,11 +1983,11 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
                   children: [
                     Icon(Icons.directions_car_filled_rounded, color: Color(0xFF00F0FF)),
                     SizedBox(width: 8),
-                    Text('من پیش خودرو هستم (دریافت کمک)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    Text('Ù…Ù† Ù¾ÛŒØ´ Ø®ÙˆØ¯Ø±Ùˆ Ù‡Ø³ØªÙ… (Ø¯Ø±ÛŒØ§ÙØª Ú©Ù…Ú©)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   ],
                 ),
                 const SizedBox(height: 8),
-                const Text('اگر در محل خودرو هستید، کلید زیر را بزنید و کد ظاهر شده را برای کارشناس پشتیبان بخوانید:',
+                const Text('Ø§Ú¯Ø± Ø¯Ø± Ù…Ø­Ù„ Ø®ÙˆØ¯Ø±Ùˆ Ù‡Ø³ØªÛŒØ¯ØŒ Ú©Ù„ÛŒØ¯ Ø²ÛŒØ± Ø±Ø§ Ø¨Ø²Ù†ÛŒØ¯ Ùˆ Ú©Ø¯ Ø¸Ø§Ù‡Ø± Ø´Ø¯Ù‡ Ø±Ø§ Ø¨Ø±Ø§ÛŒ Ú©Ø§Ø±Ø´Ù†Ø§Ø³ Ù¾Ø´ØªÛŒØ¨Ø§Ù† Ø¨Ø®ÙˆØ§Ù†ÛŒØ¯:',
                     style: TextStyle(color: Colors.white70, fontSize: 13)),
                 const SizedBox(height: 14),
                 if (_customerSessionCode.isNotEmpty && _remoteConnected) ...[
@@ -2000,7 +2000,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
                     ),
                     child: Column(
                       children: [
-                        const Text('کد اتصال شما:', style: TextStyle(color: Colors.white60, fontSize: 12)),
+                        const Text('Ú©Ø¯ Ø§ØªØµØ§Ù„ Ø´Ù…Ø§:', style: TextStyle(color: Colors.white60, fontSize: 12)),
                         const SizedBox(height: 4),
                         SelectableText(
                           _customerSessionCode,
@@ -2012,11 +2012,11 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
                   const SizedBox(height: 10),
                 ],
                 FilledButton.icon(
-                  onPressed: _remoteConnecting || (_remoteConnected && _remoteRoleLabel.contains('مشتری'))
+                  onPressed: _remoteConnecting || (_remoteConnected && _remoteRoleLabel.contains('Ù…Ø´ØªØ±ÛŒ'))
                       ? null
                       : _startCustomerSession,
                   icon: const Icon(Icons.share_location_rounded),
-                  label: Text(_remoteConnecting ? 'در حال اتصال...' : 'دریافت کد اتصال ۶ رقمی'),
+                  label: Text(_remoteConnecting ? 'Ø¯Ø± Ø­Ø§Ù„ Ø§ØªØµØ§Ù„...' : 'Ø¯Ø±ÛŒØ§ÙØª Ú©Ø¯ Ø§ØªØµØ§Ù„ Û¶ Ø±Ù‚Ù…ÛŒ'),
                 ),
               ],
             ),
@@ -2033,7 +2033,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
                   children: [
                     Icon(Icons.support_agent_rounded, color: Color(0xFFFFD54F)),
                     SizedBox(width: 8),
-                    Text('من پشتیبان هستم (اتصال به خودروی مشتری)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    Text('Ù…Ù† Ù¾Ø´ØªÛŒØ¨Ø§Ù† Ù‡Ø³ØªÙ… (Ø§ØªØµØ§Ù„ Ø¨Ù‡ Ø®ÙˆØ¯Ø±ÙˆÛŒ Ù…Ø´ØªØ±ÛŒ)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -2044,24 +2044,24 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 22, letterSpacing: 6, fontWeight: FontWeight.w900),
                   decoration: const InputDecoration(
-                    labelText: 'کد ۶ رقمی مشتری را اینجا وارد کنید',
-                    hintText: 'مثلاً 482910',
+                    labelText: 'Ú©Ø¯ Û¶ Ø±Ù‚Ù…ÛŒ Ù…Ø´ØªØ±ÛŒ Ø±Ø§ Ø§ÛŒÙ†Ø¬Ø§ ÙˆØ§Ø±Ø¯ Ú©Ù†ÛŒØ¯',
+                    hintText: 'Ù…Ø«Ù„Ø§Ù‹ 482910',
                     border: OutlineInputBorder(),
                     counterText: '',
                   ),
                 ),
                 const SizedBox(height: 10),
                 FilledButton.icon(
-                  onPressed: _remoteConnecting || (_remoteConnected && _remoteRoleLabel.contains('پشتیبان'))
+                  onPressed: _remoteConnecting || (_remoteConnected && _remoteRoleLabel.contains('Ù¾Ø´ØªÛŒØ¨Ø§Ù†'))
                       ? null
                       : _connectAsExpert,
                   style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFFD54F), foregroundColor: Colors.black),
                   icon: const Icon(Icons.login_rounded),
-                  label: const Text('اتصال مستقیم به خودرو'),
+                  label: const Text('Ø§ØªØµØ§Ù„ Ù…Ø³ØªÙ‚ÛŒÙ… Ø¨Ù‡ Ø®ÙˆØ¯Ø±Ùˆ'),
                 ),
-                if (_remoteConnected && _remoteRoleLabel.contains('پشتیبان')) ...[
+                if (_remoteConnected && _remoteRoleLabel.contains('Ù¾Ø´ØªÛŒØ¨Ø§Ù†')) ...[
                   const Divider(height: 28),
-                  const Text('میز کار کنترل از راه دور:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text('Ù…ÛŒØ² Ú©Ø§Ø± Ú©Ù†ØªØ±Ù„ Ø§Ø² Ø±Ø§Ù‡ Ø¯ÙˆØ±:', style: TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -2069,22 +2069,22 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
                     children: [
                       ActionChip(
                         avatar: const Icon(Icons.search, size: 18),
-                        label: const Text('خواندن خطا (DTC)'),
+                        label: const Text('Ø®ÙˆØ§Ù†Ø¯Ù† Ø®Ø·Ø§ (DTC)'),
                         onPressed: () => _sendRemoteDiagnostic('03'),
                       ),
                       ActionChip(
                         avatar: const Icon(Icons.delete_sweep, size: 18),
-                        label: const Text('پاک‌سازی خطاها'),
+                        label: const Text('Ù¾Ø§Ú©â€ŒØ³Ø§Ø²ÛŒ Ø®Ø·Ø§Ù‡Ø§'),
                         onPressed: () => _sendRemoteDiagnostic('04'),
                       ),
                       ActionChip(
                         avatar: const Icon(Icons.fingerprint, size: 18),
-                        label: const Text('شماره VIN'),
+                        label: const Text('Ø´Ù…Ø§Ø±Ù‡ VIN'),
                         onPressed: () => _sendRemoteDiagnostic('0902'),
                       ),
                       ActionChip(
                         avatar: const Icon(Icons.speed, size: 18),
-                        label: const Text('دور موتور لحظه‌ای'),
+                        label: const Text('Ø¯ÙˆØ± Ù…ÙˆØªÙˆØ± Ù„Ø­Ø¸Ù‡â€ŒØ§ÛŒ'),
                         onPressed: () => _sendRemoteDiagnostic('010C'),
                       ),
                     ],
@@ -2095,7 +2095,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
                       Expanded(
                         child: TextField(
                           controller: _terminalController,
-                          decoration: const InputDecoration(hintText: 'کد دلخواه (مثلاً 0105 یا 22F190)', isDense: true),
+                          decoration: const InputDecoration(hintText: 'Ú©Ø¯ Ø¯Ù„Ø®ÙˆØ§Ù‡ (Ù…Ø«Ù„Ø§Ù‹ 0105 ÛŒØ§ 22F190)', isDense: true),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -2113,7 +2113,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
                   ),
                   const SizedBox(height: 10),
                   if (_remoteResults.isNotEmpty) ...[
-                    const Text('نتایج دریافتی از خودرو:', style: TextStyle(fontSize: 12, color: Colors.white60)),
+                    const Text('Ù†ØªØ§ÛŒØ¬ Ø¯Ø±ÛŒØ§ÙØªÛŒ Ø§Ø² Ø®ÙˆØ¯Ø±Ùˆ:', style: TextStyle(fontSize: 12, color: Colors.white60)),
                     const SizedBox(height: 6),
                     ..._remoteResults.reversed.take(6).map((res) => Container(
                           width: double.infinity,
@@ -2134,13 +2134,13 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
 
   Widget _customTab()=>ListView(padding:const EdgeInsets.all(14),children:[
     Card(child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      const Text('شخصی‌سازی حرفه‌ای',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),const SizedBox(height:12),
-      TextField(controller:_workshopController,decoration:const InputDecoration(labelText:'نام تعمیرگاه / مجموعه')),
-      const SizedBox(height:8),TextField(controller:_technicianController,decoration:const InputDecoration(labelText:'نام تکنسین')),
-      const SizedBox(height:8),TextField(controller:_phoneController,keyboardType:TextInputType.phone,decoration:const InputDecoration(labelText:'شماره تماس')),
-      const SizedBox(height:12),const Text('رنگ اصلی'),const SizedBox(height:8),
+      const Text('Ø´Ø®ØµÛŒâ€ŒØ³Ø§Ø²ÛŒ Ø­Ø±ÙÙ‡â€ŒØ§ÛŒ',style:TextStyle(fontSize:18,fontWeight:FontWeight.w900)),const SizedBox(height:12),
+      TextField(controller:_workshopController,decoration:const InputDecoration(labelText:'Ù†Ø§Ù… ØªØ¹Ù…ÛŒØ±Ú¯Ø§Ù‡ / Ù…Ø¬Ù…ÙˆØ¹Ù‡')),
+      const SizedBox(height:8),TextField(controller:_technicianController,decoration:const InputDecoration(labelText:'Ù†Ø§Ù… ØªÚ©Ù†Ø³ÛŒÙ†')),
+      const SizedBox(height:8),TextField(controller:_phoneController,keyboardType:TextInputType.phone,decoration:const InputDecoration(labelText:'Ø´Ù…Ø§Ø±Ù‡ ØªÙ…Ø§Ø³')),
+      const SizedBox(height:12),const Text('Ø±Ù†Ú¯ Ø§ØµÙ„ÛŒ'),const SizedBox(height:8),
       Wrap(spacing:8,children:[0xFF00F0FF,0xFF00E676,0xFFFFC107,0xFFFF4081,0xFF7C4DFF,0xFF42A5F5].map((v)=>GestureDetector(onTap:(){setState(()=>_accent=Color(v));},child:CircleAvatar(backgroundColor:Color(v),child:_accent.value==v?const Icon(Icons.check,color:Colors.black):null))).toList()),
-      const SizedBox(height:14),FilledButton.icon(onPressed:_saveCustomization,icon:const Icon(Icons.save),label:const Text('ذخیره شخصی‌سازی')),
+      const SizedBox(height:14),FilledButton.icon(onPressed:_saveCustomization,icon:const Icon(Icons.save),label:const Text('Ø°Ø®ÛŒØ±Ù‡ Ø´Ø®ØµÛŒâ€ŒØ³Ø§Ø²ÛŒ')),
     ]))),
     Card(child:ListTile(leading:Icon(Icons.badge,color:_accent),title:Text(_custom.workshopName.isEmpty?'RASA DIAG PRO':_custom.workshopName),subtitle:Text('${_custom.technicianName}  ${_custom.phone}'))),
   ]);
@@ -2151,13 +2151,13 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       appBar: AppBar(
         title: Text(_custom.workshopName.isEmpty ? 'RASA DIAG PRO' : _custom.workshopName, style: const TextStyle(fontWeight: FontWeight.w900)),
         actions: [
-          IconButton(onPressed: _identifyVehicle, icon: const Icon(Icons.manage_search_rounded), tooltip: 'شناسایی ECU'),
-          IconButton(onPressed: _selectBluetoothDevice, icon: const Icon(Icons.bluetooth_connected_rounded), tooltip: 'اتصال'),
+          IconButton(onPressed: _identifyVehicle, icon: const Icon(Icons.manage_search_rounded), tooltip: 'Ø´Ù†Ø§Ø³Ø§ÛŒÛŒ ECU'),
+          IconButton(onPressed: _selectBluetoothDevice, icon: const Icon(Icons.bluetooth_connected_rounded), tooltip: 'Ø§ØªØµØ§Ù„'),
           PopupMenuButton<String>(
             onSelected: (v) { if (v == 'demo') _toggleDemo(!_demo); if (v == 'disconnect') _disconnect(); },
             itemBuilder: (_) => [
-              PopupMenuItem(value: 'demo', child: Text(_demo ? 'خاموش کردن دمو' : 'حالت دمو')),
-              const PopupMenuItem(value: 'disconnect', child: Text('قطع اتصال')),
+              PopupMenuItem(value: 'demo', child: Text(_demo ? 'Ø®Ø§Ù…ÙˆØ´ Ú©Ø±Ø¯Ù† Ø¯Ù…Ùˆ' : 'Ø­Ø§Ù„Øª Ø¯Ù…Ùˆ')),
+              const PopupMenuItem(value: 'disconnect', child: Text('Ù‚Ø·Ø¹ Ø§ØªØµØ§Ù„')),
             ],
           ),
         ],
@@ -2165,15 +2165,15 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
           controller: _tabs,
           isScrollable: true,
           tabs: const [
-            Tab(icon: Icon(Icons.dashboard_rounded), text: 'داشبورد'),
-            Tab(icon: Icon(Icons.directions_car_rounded), text: 'خودرو / ECU'),
-            Tab(icon: Icon(Icons.sensors_rounded), text: 'سنسورها'),
-            Tab(icon: Icon(Icons.error_outline_rounded), text: 'خطاها'),
-            Tab(icon: Icon(Icons.build_circle_rounded), text: 'عملگرها'),
-            Tab(icon: Icon(Icons.memory_rounded), text: 'اطلاعات ECU'),
-            Tab(icon: Icon(Icons.terminal_rounded), text: 'ترمینال'),
-            Tab(icon: Icon(Icons.cloud_sync_rounded), text: 'ریموت'),
-            Tab(icon: Icon(Icons.tune_rounded), text: 'شخصی‌سازی'),
+            Tab(icon: Icon(Icons.dashboard_rounded), text: 'Ø¯Ø§Ø´Ø¨ÙˆØ±Ø¯'),
+            Tab(icon: Icon(Icons.directions_car_rounded), text: 'Ø®ÙˆØ¯Ø±Ùˆ / ECU'),
+            Tab(icon: Icon(Icons.sensors_rounded), text: 'Ø³Ù†Ø³ÙˆØ±Ù‡Ø§'),
+            Tab(icon: Icon(Icons.error_outline_rounded), text: 'Ø®Ø·Ø§Ù‡Ø§'),
+            Tab(icon: Icon(Icons.build_circle_rounded), text: 'Ø¹Ù…Ù„Ú¯Ø±Ù‡Ø§'),
+            Tab(icon: Icon(Icons.memory_rounded), text: 'Ø§Ø·Ù„Ø§Ø¹Ø§Øª ECU'),
+            Tab(icon: Icon(Icons.terminal_rounded), text: 'ØªØ±Ù…ÛŒÙ†Ø§Ù„'),
+            Tab(icon: Icon(Icons.cloud_sync_rounded), text: 'Ø±ÛŒÙ…ÙˆØª'),
+            Tab(icon: Icon(Icons.tune_rounded), text: 'Ø´Ø®ØµÛŒâ€ŒØ³Ø§Ø²ÛŒ'),
           ],
         ),
       ),
@@ -2187,21 +2187,21 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
         _statusCard(),
         const SizedBox(height: 12),
         Row(children: [
-          Expanded(child: RasaGauge(label: 'دور موتور', value: '$_rpm', unit: 'RPM', progress: (_rpm / 7000).clamp(0.0, 1.0).toDouble())),
+          Expanded(child: RasaGauge(label: 'Ø¯ÙˆØ± Ù…ÙˆØªÙˆØ±', value: '$_rpm', unit: 'RPM', progress: (_rpm / 7000).clamp(0.0, 1.0).toDouble())),
           const SizedBox(width: 10),
-          Expanded(child: RasaGauge(label: 'سرعت', value: '$_speed', unit: 'KM/H', progress: (_speed / 240).clamp(0.0, 1.0).toDouble())),
+          Expanded(child: RasaGauge(label: 'Ø³Ø±Ø¹Øª', value: '$_speed', unit: 'KM/H', progress: (_speed / 240).clamp(0.0, 1.0).toDouble())),
         ]),
         const SizedBox(height: 12),
         Row(children: [
-          Expanded(child: _metric('دمای آب', '$_coolant °C', Icons.thermostat)),
-          const SizedBox(width: 8), Expanded(child: _metric('دریچه گاز', '$_throttle %', Icons.shutter_speed)),
-          const SizedBox(width: 8), Expanded(child: _metric('ولتاژ', '${_voltage.toStringAsFixed(1)} V', Icons.bolt)),
+          Expanded(child: _metric('Ø¯Ù…Ø§ÛŒ Ø¢Ø¨', '$_coolant Â°C', Icons.thermostat)),
+          const SizedBox(width: 8), Expanded(child: _metric('Ø¯Ø±ÛŒÚ†Ù‡ Ú¯Ø§Ø²', '$_throttle %', Icons.shutter_speed)),
+          const SizedBox(width: 8), Expanded(child: _metric('ÙˆÙ„ØªØ§Ú˜', '${_voltage.toStringAsFixed(1)} V', Icons.bolt)),
         ]),
         const SizedBox(height: 10),
         Card(child: ListTile(
           leading: const Icon(Icons.local_gas_station_rounded, color: Color(0xFFFFD54F), size: 32),
-          title: const Text('سوخت موجود در باک'),
-          subtitle: Text(_fuelLevel >= 0 ? 'سطح سوخت استاندارد OBD-II • ${_fuelLevel.toStringAsFixed(0)}٪' : 'این ECU PID 2F را ارائه نمی‌کند'),
+          title: const Text('Ø³ÙˆØ®Øª Ù…ÙˆØ¬ÙˆØ¯ Ø¯Ø± Ø¨Ø§Ú©'),
+          subtitle: Text(_fuelLevel >= 0 ? 'Ø³Ø·Ø­ Ø³ÙˆØ®Øª Ø§Ø³ØªØ§Ù†Ø¯Ø§Ø±Ø¯ OBD-II â€¢ ${_fuelLevel.toStringAsFixed(0)}Ùª' : 'Ø§ÛŒÙ† ECU PID 2F Ø±Ø§ Ø§Ø±Ø§Ø¦Ù‡ Ù†Ù…ÛŒâ€ŒÚ©Ù†Ø¯'),
           trailing: _fuelLevel >= 0 ? SizedBox(width: 90, child: LinearProgressIndicator(value: (_fuelLevel / 100).clamp(0.0, 1.0).toDouble())) : const Icon(Icons.help_outline),
         )),
         const SizedBox(height: 12),
@@ -2227,10 +2227,10 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('کارکرد واقعی خودرو (Odometer)', style: TextStyle(color: Colors.white54, fontSize: 11)),
+                      const Text('Ú©Ø§Ø±Ú©Ø±Ø¯ ÙˆØ§Ù‚Ø¹ÛŒ Ø®ÙˆØ¯Ø±Ùˆ (Odometer)', style: TextStyle(color: Colors.white54, fontSize: 11)),
                       const SizedBox(height: 3),
                       Text(
-                        _supportsOdometer ? '${_odometer.toStringAsFixed(0)} کیلومتر' : _odometerStatus,
+                        _supportsOdometer ? '${_odometer.toStringAsFixed(0)} Ú©ÛŒÙ„ÙˆÙ…ØªØ±' : _odometerStatus,
                         style: TextStyle(
                           fontSize: _supportsOdometer ? 18 : 13,
                           fontWeight: FontWeight.w900,
@@ -2242,7 +2242,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
                 ),
                 FilledButton.tonal(
                   onPressed: _connected ? _readOdometer : null,
-                  child: const Text('استعلام'),
+                  child: const Text('Ø§Ø³ØªØ¹Ù„Ø§Ù…'),
                 ),
               ],
             ),
@@ -2262,7 +2262,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
   Widget _ecuMiniCard() => Card(
         child: ListTile(
           leading: const CircleAvatar(backgroundColor: Color(0xFF18212C), child: Icon(Icons.memory_rounded, color: Color(0xFF00F0FF))),
-          title: const Text('ECU شناسایی‌شده', style: TextStyle(fontWeight: FontWeight.bold)),
+          title: const Text('ECU Ø´Ù†Ø§Ø³Ø§ÛŒÛŒâ€ŒØ´Ø¯Ù‡', style: TextStyle(fontWeight: FontWeight.bold)),
           subtitle: Text(_ecuModel),
           trailing: IconButton(onPressed: _identifyVehicle, icon: const Icon(Icons.refresh_rounded)),
         ),
@@ -2273,31 +2273,31 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
   Widget _vehicleTab() => ListView(padding: const EdgeInsets.all(14), children: [
         Card(child: ListTile(
           leading: const Icon(Icons.hub_rounded, color: Color(0xFF00F0FF)),
-          title: const Text('اسکن تمام پروتکل‌های ارتباطی'),
-          subtitle: Text(_protocolScanRunning ? 'در حال اسکن...' : '$_protocol • Code $_protocolCode'),
+          title: const Text('Ø§Ø³Ú©Ù† ØªÙ…Ø§Ù… Ù¾Ø±ÙˆØªÚ©Ù„â€ŒÙ‡Ø§ÛŒ Ø§Ø±ØªØ¨Ø§Ø·ÛŒ'),
+          subtitle: Text(_protocolScanRunning ? 'Ø¯Ø± Ø­Ø§Ù„ Ø§Ø³Ú©Ù†...' : '$_protocol â€¢ Code $_protocolCode'),
           trailing: FilledButton(onPressed: _connected && !_protocolScanRunning ? _scanAllElmProtocols : null, child: const Text('SCAN')),
         )),
         Card(child: ListTile(
           leading: const Icon(Icons.storage_rounded, color: Color(0xFFFFD600)),
-          title: const Text('بانک واقعی ECU — RASA ECU Database'),
-          subtitle: Text(_databaseScanning ? 'در حال Discovery...' : _databaseStatus),
+          title: const Text('Ø¨Ø§Ù†Ú© ÙˆØ§Ù‚Ø¹ÛŒ ECU â€” RASA ECU Database'),
+          subtitle: Text(_databaseScanning ? 'Ø¯Ø± Ø­Ø§Ù„ Discovery...' : _databaseStatus),
           trailing: FilledButton.icon(onPressed: _connected && !_databaseScanning ? _discoverEcuDatabase : null, icon: const Icon(Icons.manage_search), label: const Text('DISCOVER')),
         )),
         if (_matchedEcu != null) Card(child: ListTile(
           leading: const Icon(Icons.verified_rounded, color: Color(0xFF00E676)),
           title: Text(_matchedEcu!.title),
-          subtitle: Text('${_matchedEcu!.vehicleFamily} • ${_matchedEcu!.model}\n${_matchedEcu!.protocolName} • ${_matchedEcu!.confidenceText}'),
+          subtitle: Text('${_matchedEcu!.vehicleFamily} â€¢ ${_matchedEcu!.model}\n${_matchedEcu!.protocolName} â€¢ ${_matchedEcu!.confidenceText}'),
           isThreeLine: true,
           trailing: IconButton(onPressed: _saveDiscoverySnapshot, icon: const Icon(Icons.save_alt_rounded)),
         )),
         const SizedBox(height: 8),
-        const Text('پروفایل‌های عمومی / Legacy', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        const Text('Ù¾Ø±ÙˆÙØ§ÛŒÙ„â€ŒÙ‡Ø§ÛŒ Ø¹Ù…ÙˆÙ…ÛŒ / Legacy', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         ...ecuProfiles.map((p) => Card(
               child: ListTile(
                 leading: Icon(p.protocol.contains('CAN') || p.protocol.contains('UDS') ? Icons.account_tree_rounded : Icons.memory_rounded, color: const Color(0xFF00F0FF)),
                 title: Text(p.title),
-                subtitle: Text('${p.family}\n${p.protocol}${p.header == null ? '' : ' • ${p.header}'}'),
+                subtitle: Text('${p.family}\n${p.protocol}${p.header == null ? '' : ' â€¢ ${p.header}'}'),
                 isThreeLine: true,
                 trailing: p == _profile ? const Icon(Icons.check_circle, color: Color(0xFF00E676)) : null,
                 onTap: () => _applyProfile(p),
@@ -2307,68 +2307,68 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
 
   Widget _sensorsTab() => ListView(padding: const EdgeInsets.all(14), children: [
         _sensor('RPM', '$_rpm RPM', Icons.speed),
-        _sensor('سرعت خودرو', '$_speed km/h', Icons.directions_car),
-        _sensor('دمای آب', '$_coolant °C', Icons.thermostat),
-        _sensor('دریچه گاز', '$_throttle %', Icons.shutter_speed),
-        _sensor('لود موتور', '$_engineLoad %', Icons.compress),
-        _sensor('دمای هوای ورودی', '$_iat °C', Icons.air),
-        _sensor('سنسور O2', '${_o2.toStringAsFixed(3)} V', Icons.air_rounded),
-        _sensor('ولتاژ سیستم', '${_voltage.toStringAsFixed(2)} V', Icons.bolt),
-        _sensor('سوخت موجود', _fuelLevel >= 0 ? '${_fuelLevel.toStringAsFixed(0)} %' : 'پشتیبانی نشده', Icons.local_gas_station_rounded),
-        _sensor('فشار منیفولد', _map >= 0 ? '${_map.toStringAsFixed(0)} kPa' : '---', Icons.compress_rounded),
-        _sensor('جرم هوای ورودی', _maf >= 0 ? '${_maf.toStringAsFixed(1)} g/s' : '---', Icons.air_rounded),
-        _sensor('دمای محیط', _ambient > -99 ? '${_ambient.toStringAsFixed(0)} °C' : '---', Icons.thermostat_auto_rounded),
-        _sensor('کارکرد', _supportsOdometer ? '${_odometer.toStringAsFixed(0)} KM' : _odometerStatus, Icons.add_road),
+        _sensor('Ø³Ø±Ø¹Øª Ø®ÙˆØ¯Ø±Ùˆ', '$_speed km/h', Icons.directions_car),
+        _sensor('Ø¯Ù…Ø§ÛŒ Ø¢Ø¨', '$_coolant Â°C', Icons.thermostat),
+        _sensor('Ø¯Ø±ÛŒÚ†Ù‡ Ú¯Ø§Ø²', '$_throttle %', Icons.shutter_speed),
+        _sensor('Ù„ÙˆØ¯ Ù…ÙˆØªÙˆØ±', '$_engineLoad %', Icons.compress),
+        _sensor('Ø¯Ù…Ø§ÛŒ Ù‡ÙˆØ§ÛŒ ÙˆØ±ÙˆØ¯ÛŒ', '$_iat Â°C', Icons.air),
+        _sensor('Ø³Ù†Ø³ÙˆØ± O2', '${_o2.toStringAsFixed(3)} V', Icons.air_rounded),
+        _sensor('ÙˆÙ„ØªØ§Ú˜ Ø³ÛŒØ³ØªÙ…', '${_voltage.toStringAsFixed(2)} V', Icons.bolt),
+        _sensor('Ø³ÙˆØ®Øª Ù…ÙˆØ¬ÙˆØ¯', _fuelLevel >= 0 ? '${_fuelLevel.toStringAsFixed(0)} %' : 'Ù¾Ø´ØªÛŒØ¨Ø§Ù†ÛŒ Ù†Ø´Ø¯Ù‡', Icons.local_gas_station_rounded),
+        _sensor('ÙØ´Ø§Ø± Ù…Ù†ÛŒÙÙˆÙ„Ø¯', _map >= 0 ? '${_map.toStringAsFixed(0)} kPa' : '---', Icons.compress_rounded),
+        _sensor('Ø¬Ø±Ù… Ù‡ÙˆØ§ÛŒ ÙˆØ±ÙˆØ¯ÛŒ', _maf >= 0 ? '${_maf.toStringAsFixed(1)} g/s' : '---', Icons.air_rounded),
+        _sensor('Ø¯Ù…Ø§ÛŒ Ù…Ø­ÛŒØ·', _ambient > -99 ? '${_ambient.toStringAsFixed(0)} Â°C' : '---', Icons.thermostat_auto_rounded),
+        _sensor('Ú©Ø§Ø±Ú©Ø±Ø¯', _supportsOdometer ? '${_odometer.toStringAsFixed(0)} KM' : _odometerStatus, Icons.add_road),
       ]);
 
   Widget _sensor(String n, String v, IconData i) => Card(child: ListTile(leading: Icon(i, color: const Color(0xFF00F0FF)), title: Text(n), trailing: Text(v, style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00F0FF)))));
 
   Widget _dtcTab() => Column(children: [
         Padding(padding: const EdgeInsets.all(12), child: Row(children: [
-          Expanded(child: FilledButton.icon(onPressed: _loadingDtc ? null : _scanDtc, icon: const Icon(Icons.search), label: const Text('اسکن DTC'))),
+          Expanded(child: FilledButton.icon(onPressed: _loadingDtc ? null : _scanDtc, icon: const Icon(Icons.search), label: const Text('Ø§Ø³Ú©Ù† DTC'))),
           const SizedBox(width: 10),
-          Expanded(child: FilledButton.icon(onPressed: _clearingDtc ? null : _clearDtc, style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF2A55)), icon: const Icon(Icons.delete_sweep), label: const Text('پاک‌سازی'))),
+          Expanded(child: FilledButton.icon(onPressed: _clearingDtc ? null : _clearDtc, style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF2A55)), icon: const Icon(Icons.delete_sweep), label: const Text('Ù¾Ø§Ú©â€ŒØ³Ø§Ø²ÛŒ'))),
         ])),
         if (_loadingDtc) const LinearProgressIndicator(),
-        Expanded(child: _dtcs.isEmpty ? const Center(child: Text('خطایی در حافظه نمایش داده نشده است.')) : ListView.builder(padding: const EdgeInsets.all(12), itemCount: _dtcs.length, itemBuilder: (_, i) {
+        Expanded(child: _dtcs.isEmpty ? const Center(child: Text('Ø®Ø·Ø§ÛŒÛŒ Ø¯Ø± Ø­Ø§ÙØ¸Ù‡ Ù†Ù…Ø§ÛŒØ´ Ø¯Ø§Ø¯Ù‡ Ù†Ø´Ø¯Ù‡ Ø§Ø³Øª.')) : ListView.builder(padding: const EdgeInsets.all(12), itemCount: _dtcs.length, itemBuilder: (_, i) {
           final c = _dtcs[i];
-          return Card(child: ListTile(leading: Text(c, style: const TextStyle(color: Color(0xFFFF2A55), fontWeight: FontWeight.bold)), title: Text(dtcDescriptions[c] ?? 'شرح کارخانه‌ای / Manufacturer Specific')));
+          return Card(child: ListTile(leading: Text(c, style: const TextStyle(color: Color(0xFFFF2A55), fontWeight: FontWeight.bold)), title: Text(dtcDescriptions[c] ?? 'Ø´Ø±Ø­ Ú©Ø§Ø±Ø®Ø§Ù†Ù‡â€ŒØ§ÛŒ / Manufacturer Specific')));
         })),
       ]);
 
   static const List<_ActuatorStatusDefinition> _actuatorStatusDefinitions = [
-    _ActuatorStatusDefinition(name: 'انژکتور 1', group: 'سوخت', icon: Icons.water_drop_rounded, source: _ActuatorSourceType.unavailable),
-    _ActuatorStatusDefinition(name: 'انژکتور 2', group: 'سوخت', icon: Icons.water_drop_rounded, source: _ActuatorSourceType.unavailable),
-    _ActuatorStatusDefinition(name: 'انژکتور 3', group: 'سوخت', icon: Icons.water_drop_rounded, source: _ActuatorSourceType.unavailable),
-    _ActuatorStatusDefinition(name: 'انژکتور 4', group: 'سوخت', icon: Icons.water_drop_rounded, source: _ActuatorSourceType.unavailable),
-    _ActuatorStatusDefinition(name: 'پمپ بنزین', group: 'سوخت', icon: Icons.local_gas_station_rounded, source: _ActuatorSourceType.unavailable),
-    _ActuatorStatusDefinition(name: 'رله اصلی / رله دوبل', group: 'برق ECU', icon: Icons.electrical_services_rounded, source: _ActuatorSourceType.unavailable),
-    _ActuatorStatusDefinition(name: 'کویل 1/4', group: 'جرقه', icon: Icons.bolt_rounded, source: _ActuatorSourceType.unavailable),
-    _ActuatorStatusDefinition(name: 'کویل 2/3', group: 'جرقه', icon: Icons.bolt_rounded, source: _ActuatorSourceType.unavailable),
-    _ActuatorStatusDefinition(name: 'فن دور کند', group: 'خنک کاری', icon: Icons.air_rounded, source: _ActuatorSourceType.unavailable),
-    _ActuatorStatusDefinition(name: 'فن دور تند', group: 'خنک کاری', icon: Icons.air_rounded, source: _ActuatorSourceType.unavailable),
-    _ActuatorStatusDefinition(name: 'پمپ آب برقی', group: 'خنک کاری', icon: Icons.water_rounded, source: _ActuatorSourceType.unavailable),
-    _ActuatorStatusDefinition(name: 'دریچه گاز برقی', group: 'هوا', icon: Icons.tune_rounded, source: _ActuatorSourceType.unavailable),
-    _ActuatorStatusDefinition(name: 'استپر / کنترل دور آرام', group: 'هوا', icon: Icons.settings_rounded, source: _ActuatorSourceType.unavailable),
-    _ActuatorStatusDefinition(name: 'شیر EGR', group: 'هوا', icon: Icons.air_rounded, source: _ActuatorSourceType.unavailable),
-    _ActuatorStatusDefinition(name: 'شیر کنیستر EVAP', group: 'هوا', icon: Icons.filter_alt_rounded, source: _ActuatorSourceType.unavailable),
-    _ActuatorStatusDefinition(name: 'VVT / CVVT', group: 'تایمینگ', icon: Icons.settings_rounded, source: _ActuatorSourceType.unavailable),
-    _ActuatorStatusDefinition(name: 'شیر Wastegate / Boost', group: 'توربو', icon: Icons.speed_rounded, source: _ActuatorSourceType.unavailable),
-    _ActuatorStatusDefinition(name: 'کمپرسور کولر', group: 'کولر', icon: Icons.ac_unit_rounded, source: _ActuatorSourceType.unavailable),
-    _ActuatorStatusDefinition(name: 'گرمکن سنسور اکسیژن', group: 'اگزوز', icon: Icons.whatshot_rounded, source: _ActuatorSourceType.unavailable),
-    _ActuatorStatusDefinition(name: 'پمپ هوای ثانویه', group: 'اگزوز', icon: Icons.air_rounded, source: _ActuatorSourceType.unavailable),
-    _ActuatorStatusDefinition(name: 'رگلاتور فشار سوخت', group: 'سوخت', icon: Icons.compress_rounded, source: _ActuatorSourceType.unavailable),
-    _ActuatorStatusDefinition(name: 'شمع گرمکن', group: 'جرقه', icon: Icons.local_fire_department_rounded, source: _ActuatorSourceType.unavailable),
-    _ActuatorStatusDefinition(name: 'چراغ MIL', group: 'هشدار', icon: Icons.warning_amber_rounded, source: _ActuatorSourceType.obdPid, idHex: '01', byteOffset: 0, mask: 0x80, onValue: 0x80, offValue: 0x00),
+    _ActuatorStatusDefinition(name: 'Ø§Ù†Ú˜Ú©ØªÙˆØ± 1', group: 'Ø³ÙˆØ®Øª', icon: Icons.water_drop_rounded, source: _ActuatorSourceType.unavailable),
+    _ActuatorStatusDefinition(name: 'Ø§Ù†Ú˜Ú©ØªÙˆØ± 2', group: 'Ø³ÙˆØ®Øª', icon: Icons.water_drop_rounded, source: _ActuatorSourceType.unavailable),
+    _ActuatorStatusDefinition(name: 'Ø§Ù†Ú˜Ú©ØªÙˆØ± 3', group: 'Ø³ÙˆØ®Øª', icon: Icons.water_drop_rounded, source: _ActuatorSourceType.unavailable),
+    _ActuatorStatusDefinition(name: 'Ø§Ù†Ú˜Ú©ØªÙˆØ± 4', group: 'Ø³ÙˆØ®Øª', icon: Icons.water_drop_rounded, source: _ActuatorSourceType.unavailable),
+    _ActuatorStatusDefinition(name: 'Ù¾Ù…Ù¾ Ø¨Ù†Ø²ÛŒÙ†', group: 'Ø³ÙˆØ®Øª', icon: Icons.local_gas_station_rounded, source: _ActuatorSourceType.unavailable),
+    _ActuatorStatusDefinition(name: 'Ø±Ù„Ù‡ Ø§ØµÙ„ÛŒ / Ø±Ù„Ù‡ Ø¯ÙˆØ¨Ù„', group: 'Ø¨Ø±Ù‚ ECU', icon: Icons.electrical_services_rounded, source: _ActuatorSourceType.unavailable),
+    _ActuatorStatusDefinition(name: 'Ú©ÙˆÛŒÙ„ 1/4', group: 'Ø¬Ø±Ù‚Ù‡', icon: Icons.bolt_rounded, source: _ActuatorSourceType.unavailable),
+    _ActuatorStatusDefinition(name: 'Ú©ÙˆÛŒÙ„ 2/3', group: 'Ø¬Ø±Ù‚Ù‡', icon: Icons.bolt_rounded, source: _ActuatorSourceType.unavailable),
+    _ActuatorStatusDefinition(name: 'ÙÙ† Ø¯ÙˆØ± Ú©Ù†Ø¯', group: 'Ø®Ù†Ú© Ú©Ø§Ø±ÛŒ', icon: Icons.air_rounded, source: _ActuatorSourceType.unavailable),
+    _ActuatorStatusDefinition(name: 'ÙÙ† Ø¯ÙˆØ± ØªÙ†Ø¯', group: 'Ø®Ù†Ú© Ú©Ø§Ø±ÛŒ', icon: Icons.air_rounded, source: _ActuatorSourceType.unavailable),
+    _ActuatorStatusDefinition(name: 'Ù¾Ù…Ù¾ Ø¢Ø¨ Ø¨Ø±Ù‚ÛŒ', group: 'Ø®Ù†Ú© Ú©Ø§Ø±ÛŒ', icon: Icons.water_rounded, source: _ActuatorSourceType.unavailable),
+    _ActuatorStatusDefinition(name: 'Ø¯Ø±ÛŒÚ†Ù‡ Ú¯Ø§Ø² Ø¨Ø±Ù‚ÛŒ', group: 'Ù‡ÙˆØ§', icon: Icons.tune_rounded, source: _ActuatorSourceType.unavailable),
+    _ActuatorStatusDefinition(name: 'Ø§Ø³ØªÙ¾Ø± / Ú©Ù†ØªØ±Ù„ Ø¯ÙˆØ± Ø¢Ø±Ø§Ù…', group: 'Ù‡ÙˆØ§', icon: Icons.settings_rounded, source: _ActuatorSourceType.unavailable),
+    _ActuatorStatusDefinition(name: 'Ø´ÛŒØ± EGR', group: 'Ù‡ÙˆØ§', icon: Icons.air_rounded, source: _ActuatorSourceType.unavailable),
+    _ActuatorStatusDefinition(name: 'Ø´ÛŒØ± Ú©Ù†ÛŒØ³ØªØ± EVAP', group: 'Ù‡ÙˆØ§', icon: Icons.filter_alt_rounded, source: _ActuatorSourceType.unavailable),
+    _ActuatorStatusDefinition(name: 'VVT / CVVT', group: 'ØªØ§ÛŒÙ…ÛŒÙ†Ú¯', icon: Icons.settings_rounded, source: _ActuatorSourceType.unavailable),
+    _ActuatorStatusDefinition(name: 'Ø´ÛŒØ± Wastegate / Boost', group: 'ØªÙˆØ±Ø¨Ùˆ', icon: Icons.speed_rounded, source: _ActuatorSourceType.unavailable),
+    _ActuatorStatusDefinition(name: 'Ú©Ù…Ù¾Ø±Ø³ÙˆØ± Ú©ÙˆÙ„Ø±', group: 'Ú©ÙˆÙ„Ø±', icon: Icons.ac_unit_rounded, source: _ActuatorSourceType.unavailable),
+    _ActuatorStatusDefinition(name: 'Ú¯Ø±Ù…Ú©Ù† Ø³Ù†Ø³ÙˆØ± Ø§Ú©Ø³ÛŒÚ˜Ù†', group: 'Ø§Ú¯Ø²ÙˆØ²', icon: Icons.whatshot_rounded, source: _ActuatorSourceType.unavailable),
+    _ActuatorStatusDefinition(name: 'Ù¾Ù…Ù¾ Ù‡ÙˆØ§ÛŒ Ø«Ø§Ù†ÙˆÛŒÙ‡', group: 'Ø§Ú¯Ø²ÙˆØ²', icon: Icons.air_rounded, source: _ActuatorSourceType.unavailable),
+    _ActuatorStatusDefinition(name: 'Ø±Ú¯Ù„Ø§ØªÙˆØ± ÙØ´Ø§Ø± Ø³ÙˆØ®Øª', group: 'Ø³ÙˆØ®Øª', icon: Icons.compress_rounded, source: _ActuatorSourceType.unavailable),
+    _ActuatorStatusDefinition(name: 'Ø´Ù…Ø¹ Ú¯Ø±Ù…Ú©Ù†', group: 'Ø¬Ø±Ù‚Ù‡', icon: Icons.local_fire_department_rounded, source: _ActuatorSourceType.unavailable),
+    _ActuatorStatusDefinition(name: 'Ú†Ø±Ø§Øº MIL', group: 'Ù‡Ø´Ø¯Ø§Ø±', icon: Icons.warning_amber_rounded, source: _ActuatorSourceType.obdPid, idHex: '01', byteOffset: 0, mask: 0x80, onValue: 0x80, offValue: 0x00),
   ];
 
   List<_ActuatorStatusDefinition> get _availableActuatorDefinitions => _actuatorStatusDefinitions;
 
   String _statusSourceLabel(_ActuatorSourceType source) {
     switch (source) {
-      case _ActuatorSourceType.obdPid: return 'OBD-II مستقیم';
-      case _ActuatorSourceType.udsDid: return 'UDS DID مستقیم';
-      case _ActuatorSourceType.unavailable: return 'منبع مستقیم ثبت نشده';
+      case _ActuatorSourceType.obdPid: return 'OBD-II Ù…Ø³ØªÙ‚ÛŒÙ…';
+      case _ActuatorSourceType.udsDid: return 'UDS DID Ù…Ø³ØªÙ‚ÛŒÙ…';
+      case _ActuatorSourceType.unavailable: return 'Ù…Ù†Ø¨Ø¹ Ù…Ø³ØªÙ‚ÛŒÙ… Ø«Ø¨Øª Ù†Ø´Ø¯Ù‡';
     }
   }
 
@@ -2376,7 +2376,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     final old = _actuatorStates[name];
     if (old != state) {
       _actuatorChangedAt[name] = DateTime.now();
-      _actuatorChangeText[name] = old == null ? 'اولین وضعیت قطعی ثبت شد' : '$old ← $state';
+      _actuatorChangeText[name] = old == null ? 'Ø§ÙˆÙ„ÛŒÙ† ÙˆØ¶Ø¹ÛŒØª Ù‚Ø·Ø¹ÛŒ Ø«Ø¨Øª Ø´Ø¯' : '$old â† $state';
     }
     _actuatorStates[name] = state;
     _actuatorEvidence[name] = evidence;
@@ -2388,8 +2388,8 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     if (milIdx >= 0 && milIdx + 6 <= clean.length) {
       final v = int.tryParse(clean.substring(milIdx + 4, milIdx + 6), radix: 16);
       if (v != null) {
-        final state = (v & 0x80) != 0 ? 'ON — قطعی' : 'OFF — قطعی';
-        _recordDirectActuatorState('چراغ MIL', state, 'OBD PID 01 • MIL bit7 • raw=${v.toRadixString(16).padLeft(2, '0').toUpperCase()}');
+        final state = (v & 0x80) != 0 ? 'ON â€” Ù‚Ø·Ø¹ÛŒ' : 'OFF â€” Ù‚Ø·Ø¹ÛŒ';
+        _recordDirectActuatorState('Ú†Ø±Ø§Øº MIL', state, 'OBD PID 01 â€¢ MIL bit7 â€¢ raw=${v.toRadixString(16).padLeft(2, '0').toUpperCase()}');
         if (mounted) setState(() {});
       }
     }
@@ -2400,12 +2400,12 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       final b = int.tryParse(clean.substring(idx + 6, idx + 8), radix: 16);
       if (a != null) {
         String state;
-        if (a == 0) state = 'OFF — قطعی';
-        else if ((a & 0x02) != 0) state = 'CLOSED LOOP — قطعی';
-        else if ((a & 0x01) != 0) state = 'OPEN LOOP — قطعی';
-        else state = 'STATUS — قطعی';
-        _recordDirectActuatorState('وضعیت سیستم سوخت 1', state,
-            'OBD PID 03 • byte=${a.toRadixString(16).padLeft(2, '0').toUpperCase()}${b == null ? '' : ' ${b.toRadixString(16).padLeft(2, '0').toUpperCase()}'}');
+        if (a == 0) state = 'OFF â€” Ù‚Ø·Ø¹ÛŒ';
+        else if ((a & 0x02) != 0) state = 'CLOSED LOOP â€” Ù‚Ø·Ø¹ÛŒ';
+        else if ((a & 0x01) != 0) state = 'OPEN LOOP â€” Ù‚Ø·Ø¹ÛŒ';
+        else state = 'STATUS â€” Ù‚Ø·Ø¹ÛŒ';
+        _recordDirectActuatorState('ÙˆØ¶Ø¹ÛŒØª Ø³ÛŒØ³ØªÙ… Ø³ÙˆØ®Øª 1', state,
+            'OBD PID 03 â€¢ byte=${a.toRadixString(16).padLeft(2, '0').toUpperCase()}${b == null ? '' : ' ${b.toRadixString(16).padLeft(2, '0').toUpperCase()}'}');
         if (mounted) setState(() {});
       }
     }
@@ -2414,8 +2414,8 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     if (airIdx >= 0 && airIdx + 6 <= clean.length) {
       final v = int.tryParse(clean.substring(airIdx + 4, airIdx + 6), radix: 16);
       if (v != null) {
-        final state = v == 0 ? 'OFF — قطعی' : 'ON — قطعی';
-        _recordDirectActuatorState('پمپ هوای ثانویه', state, 'OBD PID 12 • raw=${v.toRadixString(16).padLeft(2, '0').toUpperCase()}');
+        final state = v == 0 ? 'OFF â€” Ù‚Ø·Ø¹ÛŒ' : 'ON â€” Ù‚Ø·Ø¹ÛŒ';
+        _recordDirectActuatorState('Ù¾Ù…Ù¾ Ù‡ÙˆØ§ÛŒ Ø«Ø§Ù†ÙˆÛŒÙ‡', state, 'OBD PID 12 â€¢ raw=${v.toRadixString(16).padLeft(2, '0').toUpperCase()}');
         if (mounted) setState(() {});
       }
     }
@@ -2426,7 +2426,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
     final evidence = _actuatorEvidence[def.name] ?? _statusSourceLabel(def.source);
     final changed = _actuatorChangedAt[def.name];
     final change = _actuatorChangeText[def.name];
-    final direct = state.contains('قطعی');
+    final direct = state.contains('Ù‚Ø·Ø¹ÛŒ');
     final color = direct ? (state.startsWith('ON') || state.startsWith('CLOSED') ? const Color(0xFF00E676) : const Color(0xFFB0BEC5)) : const Color(0xFFFFC107);
     return Card(child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
@@ -2438,7 +2438,7 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
           Text(def.group, style: const TextStyle(fontSize: 10, color: Colors.white38)),
           const SizedBox(height: 3),
           Text(evidence, style: const TextStyle(fontSize: 11, color: Colors.white60)),
-          if (changed != null && change != null) Text('تغییر: $change', style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w700)),
+          if (changed != null && change != null) Text('ØªØºÛŒÛŒØ±: $change', style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w700)),
         ])),
         const SizedBox(width: 8),
         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
@@ -2454,8 +2454,8 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
       Card(
         child: ListTile(
           leading: const Icon(Icons.verified_user_rounded, color: Color(0xFF00F0FF), size: 32),
-          title: const Text('تست و فعال‌سازی عملگرها (Actuator Test)', style: TextStyle(fontWeight: FontWeight.w900)),
-          subtitle: Text(_matchedEcu != null ? 'تطبیق با: ${_matchedEcu!.title}' : 'ECU تطبیق‌یافته مشخص نیست'),
+          title: const Text('ØªØ³Øª Ùˆ ÙØ¹Ø§Ù„â€ŒØ³Ø§Ø²ÛŒ Ø¹Ù…Ù„Ú¯Ø±Ù‡Ø§ (Actuator Test)', style: TextStyle(fontWeight: FontWeight.w900)),
+          subtitle: Text(_matchedEcu != null ? 'ØªØ·Ø¨ÛŒÙ‚ Ø¨Ø§: ${_matchedEcu!.title}' : 'ECU ØªØ·Ø¨ÛŒÙ‚â€ŒÛŒØ§ÙØªÙ‡ Ù…Ø´Ø®Øµ Ù†ÛŒØ³Øª'),
         ),
       ),
       if (_activeRunningTest != null)
@@ -2469,21 +2469,21 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'در حال تحریک: ${_activeRunningTest!.name} (${_actuatorRemainingSeconds}s باقی‌مانده)',
+                    'Ø¯Ø± Ø­Ø§Ù„ ØªØ­Ø±ÛŒÚ©: ${_activeRunningTest!.name} (${_actuatorRemainingSeconds}s Ø¨Ø§Ù‚ÛŒâ€ŒÙ…Ø§Ù†Ø¯Ù‡)',
                     style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFFF2A55)),
                   ),
                 ),
                 FilledButton.tonal(
                   onPressed: _stopCurrentActuatorTest,
                   style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF2A55), foregroundColor: Colors.white),
-                  child: const Text('توقف اضطراری'),
+                  child: const Text('ØªÙˆÙ‚Ù Ø§Ø¶Ø·Ø±Ø§Ø±ÛŒ'),
                 )
               ],
             ),
           ),
         ),
       const SizedBox(height: 10),
-      const Text('عملگرهای قابل تحریک بر روی این خودرو:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white70)),
+      const Text('Ø¹Ù…Ù„Ú¯Ø±Ù‡Ø§ÛŒ Ù‚Ø§Ø¨Ù„ ØªØ­Ø±ÛŒÚ© Ø¨Ø± Ø±ÙˆÛŒ Ø§ÛŒÙ† Ø®ÙˆØ¯Ø±Ùˆ:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white70)),
       const SizedBox(height: 6),
       ...verifiedActuatorTests.map((test) {
         final supported = _isActuatorSupportedForCurrentEcu(test);
@@ -2497,53 +2497,53 @@ class _RasaDashboardScreenState extends State<RasaDashboardScreen> with SingleTi
               child: Icon(test.icon, color: supported ? const Color(0xFF00F0FF) : Colors.white24),
             ),
             title: Text(test.name, style: TextStyle(color: supported ? Colors.white : Colors.white38, fontWeight: FontWeight.w700)),
-            subtitle: Text('${test.group} • ${test.protocol.name.toUpperCase()} • ${supported ? 'سازگار با ECU' : 'عدم پشتیبانی در این مدل'}',
+            subtitle: Text('${test.group} â€¢ ${test.protocol.name.toUpperCase()} â€¢ ${supported ? 'Ø³Ø§Ø²Ú¯Ø§Ø± Ø¨Ø§ ECU' : 'Ø¹Ø¯Ù… Ù¾Ø´ØªÛŒØ¨Ø§Ù†ÛŒ Ø¯Ø± Ø§ÛŒÙ† Ù…Ø¯Ù„'}',
                 style: TextStyle(fontSize: 11, color: supported ? const Color(0xFF00E676) : Colors.white24)),
             trailing: isRunning
                 ? OutlinedButton(
                     onPressed: _stopCurrentActuatorTest,
-                    child: Text('${_actuatorRemainingSeconds}s توقف', style: const TextStyle(color: Color(0xFFFF2A55))),
+                    child: Text('${_actuatorRemainingSeconds}s ØªÙˆÙ‚Ù', style: const TextStyle(color: Color(0xFFFF2A55))),
                   )
                 : FilledButton(
                     onPressed: (supported && _connected && !_actuatorActionInProgress) ? () => _runActuatorTest(test) : null,
-                    child: const Text('تحریک'),
+                    child: const Text('ØªØ­Ø±ÛŒÚ©'),
                   ),
           ),
         );
       }),
       const Divider(height: 32),
-      const Text('وضعیت خواندنی عملگرها (Passive Monitoring):', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white70)),
+      const Text('ÙˆØ¶Ø¹ÛŒØª Ø®ÙˆØ§Ù†Ø¯Ù†ÛŒ Ø¹Ù…Ù„Ú¯Ø±Ù‡Ø§ (Passive Monitoring):', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white70)),
       const SizedBox(height: 6),
       ..._availableActuatorDefinitions.map(_actuatorStatusCard),
-      if (_actuatorStates.containsKey('وضعیت سیستم سوخت 1'))
-        _actuatorStatusCard(const _ActuatorStatusDefinition(name: 'وضعیت سیستم سوخت 1', group: 'OBD-II', icon: Icons.local_gas_station_rounded, source: _ActuatorSourceType.obdPid, idHex: '03')),
+      if (_actuatorStates.containsKey('ÙˆØ¶Ø¹ÛŒØª Ø³ÛŒØ³ØªÙ… Ø³ÙˆØ®Øª 1'))
+        _actuatorStatusCard(const _ActuatorStatusDefinition(name: 'ÙˆØ¶Ø¹ÛŒØª Ø³ÛŒØ³ØªÙ… Ø³ÙˆØ®Øª 1', group: 'OBD-II', icon: Icons.local_gas_station_rounded, source: _ActuatorSourceType.obdPid, idHex: '03')),
     ]);
   }
 
   Widget _ecuTab() => ListView(padding: const EdgeInsets.all(14), children: [
-        Card(child: ListTile(leading: const Icon(Icons.memory, color: Color(0xFF00F0FF), size: 32), title: const Text('مدل ECU'), subtitle: Text(_ecuModel, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)), trailing: _scanInProgress ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator()) : IconButton(onPressed: _identifyVehicle, icon: const Icon(Icons.refresh)))),
-        _info('بانک ECU', 'RASA ECU Database v1.3 • $_databaseStatus'),
-        _info('خودرو / خانواده', _matchedEcu?.model ?? _profile.family),
-        _info('سازنده / مدل ECU', _matchedEcu == null ? _profile.title : _matchedEcu!.title),
+        Card(child: ListTile(leading: const Icon(Icons.memory, color: Color(0xFF00F0FF), size: 32), title: const Text('Ù…Ø¯Ù„ ECU'), subtitle: Text(_ecuModel, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)), trailing: _scanInProgress ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator()) : IconButton(onPressed: _identifyVehicle, icon: const Icon(Icons.refresh)))),
+        _info('Ø¨Ø§Ù†Ú© ECU', 'RASA ECU Database v1.3 â€¢ $_databaseStatus'),
+        _info('Ø®ÙˆØ¯Ø±Ùˆ / Ø®Ø§Ù†ÙˆØ§Ø¯Ù‡', _matchedEcu?.model ?? _profile.family),
+        _info('Ø³Ø§Ø²Ù†Ø¯Ù‡ / Ù…Ø¯Ù„ ECU', _matchedEcu == null ? _profile.title : _matchedEcu!.title),
         _info('ECU ID / Part', _hwId),
         _info('ECU Software ID', _swId),
-        _info('پروتکل', '$_protocol • Code $_protocolCode'),
-        _info('هدر درخواست', _udsRequestHeader.isNotEmpty ? _udsRequestHeader : (_matchedEcu?.requestHeader ?? _profile.header ?? 'Trace / Auto')),
-        _info('هدر پاسخ', _udsResponseHeader.isNotEmpty ? _udsResponseHeader : '---'),
-        _info('روش شناسایی', _discoveryMethod),
+        _info('Ù¾Ø±ÙˆØªÚ©Ù„', '$_protocol â€¢ Code $_protocolCode'),
+        _info('Ù‡Ø¯Ø± Ø¯Ø±Ø®ÙˆØ§Ø³Øª', _udsRequestHeader.isNotEmpty ? _udsRequestHeader : (_matchedEcu?.requestHeader ?? _profile.header ?? 'Trace / Auto')),
+        _info('Ù‡Ø¯Ø± Ù¾Ø§Ø³Ø®', _udsResponseHeader.isNotEmpty ? _udsResponseHeader : '---'),
+        _info('Ø±ÙˆØ´ Ø´Ù†Ø§Ø³Ø§ÛŒÛŒ', _discoveryMethod),
         _info('VIN', _vin),
         _info('Adapter', _adapterInfo),
         const SizedBox(height: 10),
-        FilledButton.icon(onPressed: _connected ? _identifyVehicle : null, icon: const Icon(Icons.manage_search), label: const Text('شناسایی مجدد ECU')),
-        FilledButton.icon(onPressed: _connected && !_databaseScanning ? _discoverEcuDatabase : null, icon: const Icon(Icons.account_tree_rounded), label: const Text('Discovery + تطبیق با بانک ECU')),
-        FilledButton.icon(onPressed: _discoveryTrace.isNotEmpty ? _saveDiscoverySnapshot : null, icon: const Icon(Icons.save_alt), label: const Text('ذخیره Trace')),
+        FilledButton.icon(onPressed: _connected ? _identifyVehicle : null, icon: const Icon(Icons.manage_search), label: const Text('Ø´Ù†Ø§Ø³Ø§ÛŒÛŒ Ù…Ø¬Ø¯Ø¯ ECU')),
+        FilledButton.icon(onPressed: _connected && !_databaseScanning ? _discoverEcuDatabase : null, icon: const Icon(Icons.account_tree_rounded), label: const Text('Discovery + ØªØ·Ø¨ÛŒÙ‚ Ø¨Ø§ Ø¨Ø§Ù†Ú© ECU')),
+        FilledButton.icon(onPressed: _discoveryTrace.isNotEmpty ? _saveDiscoverySnapshot : null, icon: const Icon(Icons.save_alt), label: const Text('Ø°Ø®ÛŒØ±Ù‡ Trace')),
         const SizedBox(height: 8),
         if (_dbMatches.isNotEmpty) ...[
-          Text('نتایج بانک ECU (${_dbMatches.length})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Text('Ù†ØªØ§ÛŒØ¬ Ø¨Ø§Ù†Ú© ECU (${_dbMatches.length})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           ..._dbMatches.map((e) => Card(child: ListTile(
             leading: Icon(e.confidence == EcuConfidence.verified ? Icons.verified : Icons.warning_amber_rounded, color: e.confidence == EcuConfidence.verified ? const Color(0xFF00E676) : const Color(0xFFFFD600)),
             title: Text(e.title),
-            subtitle: Text('${e.model} • ${e.protocolName}\n${e.sourceNote}'),
+            subtitle: Text('${e.model} â€¢ ${e.protocolName}\n${e.sourceNote}'),
             isThreeLine: true,
           ))),
         ],
